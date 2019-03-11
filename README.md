@@ -24,5 +24,5 @@ sudo cp geckodriver /usr/local/bin/geckodriver
 
 Install the dependencies :
 ```
-sudo pip install google-api-python-client panda requests bs4 selenium
+sudo pip install google-api-python-client requests bs4 selenium sqlite3
 ```
