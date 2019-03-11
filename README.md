@@ -60,3 +60,8 @@ Install the dependencies :
 ```
 sudo pip install google-api-python-client requests bs4 selenium sqlite3 mrjob
 ```
+## Contributing
+
+- test folder : Only here as a sandbox. It is sometime usefull to try queries on the kaggle database before implementing.
+- sample folder : Implementation of the final code with only 100 commits instead of 128 millions
+- src folder : Implementation of the final code with every commits
