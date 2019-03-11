@@ -3,8 +3,7 @@
 from mrjob.job import *
 from bs4 import BeautifulSoup
 from selenium import webdriver
-from selenium.webdriver.support.ui import WebDriverWait
-import requests, traceback, csv, sqlite3, sys, os
+import requests, traceback, sqlite3, sys
 
 class ReposScrapper(MRJob):
 

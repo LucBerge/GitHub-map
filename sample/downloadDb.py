@@ -1,8 +1,7 @@
 #!/usr/bin/python
 
-import pandas as pd
 from google.cloud import bigquery
-import traceback, csv, os, sqlite3
+import traceback, os, sqlite3
 
 GOOGLE_KEY = "../kaggle-service.json"
 out = os.popen('echo $GOOGLE_APPLICATION_CREDENTIALS').read()

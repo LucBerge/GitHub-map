@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
 import os, traceback
-import pandas as pd
 from google.cloud import bigquery
 
 MAX_QUERY_SIZE = 100 #Go
