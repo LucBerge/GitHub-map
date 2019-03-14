@@ -42,17 +42,13 @@ The GitHub-map project have for objective to create the GitHub community map. In
 
 Create a [Google API key](https://cloud.google.com/bigquery/docs/reference/libraries) to query the kaggle database.
 
-Pip installation for **Windows**:
-```
-python get-pip.py
-```
-Install the [geckodriver](https://github.com/mozilla/geckodriver/releases) for windows.
+**Windows**:
+- Install pip  ```python get-pip.py```
+- Install [geckodriver](https://github.com/mozilla/geckodriver/releases).
 
-Pip installation for **Linux**:
-```
-sudo apt-get install python-pip
-sudo cp geckodriver /usr/local/bin/geckodriver
-```
+**Linux**:
+- Install pip ```sudo apt-get install python-pip```
+- Copy geckodriver to a sourced path ```sudo cp geckodriver /usr/local/bin/geckodriver```
 
 ## Installation
 
