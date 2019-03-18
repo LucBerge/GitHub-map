@@ -36,8 +36,8 @@ The GitHub-map project have for objective to create the GitHub community map. In
 |-|:-:|:-|
 | _user_name_ | text | Foreign key of the repos table |
 | _email_ | text | Foreign key of the users table |
-| commits | text | Number of commit from the user on the repo |
-| issues | text | Number of issues from the user on the repo |
+| commits | int | Number of commit from the user on the repo |
+| issues | int | Number of issues from the user on the repo |
 
 ## Prerequisite
 
