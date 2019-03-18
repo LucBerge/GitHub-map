@@ -14,22 +14,21 @@ class ReposScrapper(MRJob):
 
 	def steps(self):
 		return [
-			MRStep(mapper=self.mapper1,
-				combiner=self.combiner,
-				reducer=self.reducer),
+			MRStep(mapper=self.mapper_count,
+				combiner=self.combiner_count,
+				reducer=self.reducer_count),
 			MRStep(mapper_init=self.mapper_init,
 				mapper=self.mapper,
 				mapper_final=self.mapper_final)
 		]
 
-	def mapper1(self, key, repo_name):
+	def mapper_count(self, key, repo_name):
 		yield repo_name, 1
 
-	def combiner(self, repo_name, number):
+	def combiner_count(self, repo_name, number):
 		yield repo_name, sum(number)
 
-	def reducer(self, repo_name, number):
-		print(repo_name)
+	def reducer_count(self, repo_name, number):
 		yield repo_name, sum(number)
 
 	def mapper_init(self):

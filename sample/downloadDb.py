@@ -53,20 +53,21 @@ def main():
 	query = """
 		SELECT repo_name, committer 
 		FROM `bigquery-public-data.github_repos.commits`
-		LIMIT 10
+		LIMIT 100
 		"""
 	service = bigquery.Client()
 	results = service.query(query)
 
 	#For each couple, add the new value in the table or add 1 to the number of commits
 	for row in results:
+
+		#Add the user to the output file
+		users_file.write(row['committer']['email'].encode('ascii') + ';' + row['committer']['name'].encode('utf-8') + '\n')
+
 		for repo_name in row['repo_name']:
 
 			#Add the repo to the output file
 			repos_file.write(repo_name.encode('ascii')+'\n')
-
-			#Add the user to the output file
-			users_file.write(row['committer']['email'].encode('ascii') + ';' + row['committer']['name'].encode('utf-8') + '\n')
 
 			#Add a repo to user link
 			c.execute('''SELECT commits
