@@ -2,3 +2,4 @@
 *.pem
 presentations/
 *.sh
+tests/
