@@ -26,7 +26,7 @@ The GitHub-map project have for objective to create the GitHub community map. In
 
 | Column | type | comment |
 |-|:-:|:-|
-| _email_ | text | Primary key |
+| _user_name_ | text | Primary key |
 | name | text | Name |
 | age | text | Age |
 
@@ -34,9 +34,10 @@ The GitHub-map project have for objective to create the GitHub community map. In
 
 | Column | type | comment |
 |-|:-:|:-|
-| _repo_name_ | text | Foreign key of the repos table |
+| _user_name_ | text | Foreign key of the repos table |
 | _email_ | text | Foreign key of the users table |
 | commits | text | Number of commit from the user on the repo |
+| issues | text | Number of issues from the user on the repo |
 
 ## Prerequisite
 
