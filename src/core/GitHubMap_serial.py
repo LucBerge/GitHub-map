@@ -10,7 +10,9 @@ class GitHubMap:
 	MAX_ITERATIONS = 50
 	WEIGHT_COMMIT = 1
 	WEIGHT_ISSUE = 1
-	SPEED = 10
+
+	EPSILON = 0.15
+	SPEED = 0.5
 
 	MIN_SIZE = 5
 	MAX_SIZE = 50
@@ -22,7 +24,7 @@ class GitHubMap:
 
 	SAVE_FOLDER = 'plot/'
 	SAVE_EXTENTION = '.png'
-	DPI = 100
+	INCHES = 10
 
 	# VARIABLE
 
@@ -31,6 +33,7 @@ class GitHubMap:
 	scrapping = False
 
 	def __init__(self, name, scrapping=False):
+		print("Creating the database...")
 
 		self.file = str(name)+'.db'
 		self.database = sqlite3.connect(self.file)
@@ -72,31 +75,31 @@ class GitHubMap:
 
 	def repo_exists(self, repo_name):
 		c = self.database.cursor()
-		c.execute('''SELECT repo_name FROM repos WHERE repo_name=?''', (repo_name))
+		c.execute('''SELECT repo_name FROM repos WHERE repo_name=?''', (repo_name,))
 		return len(c.fetchall()) > 0
 
 	def user_exists(self, user_name):
 		c = self.database.cursor()
-		c.execute('''SELECT user_name FROM users WHERE user_name=?''', (user_name))
+		c.execute('''SELECT user_name FROM users WHERE user_name=?''', (user_name,))
 		return len(c.fetchall()) > 0
 
 	def contribution_exists(self, repo_name, user_name):
 		c = self.database.cursor()
-		c.execute('''SELECT commits, issues FROM contributions WHERE repo_name=? AND user_name=?''', (repo_name, user_name))
+		c.execute('''SELECT commits, issues FROM contributions WHERE repo_name=? AND user_name=?''', (repo_name, user_name,))
 		return len(c.fetchall()) > 0
 
 	def add_repo(self, repo_name):
 		dict = {'commits':0, 'branches':0, 'releases':0, 'contributors':0, 'issues':0, 'pull_requests':0, 'watchs':0, 'starts':0, 'forks':0, 'age':-1}
 		c = self.database.cursor()
 		c.execute('''INSERT INTO repos (repo_name, commits, branches, releases, contributors, issues, pull_requests, watchs, starts, forks, age)
-					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (repo_name, dict['commits'], dict['branches'], dict['releases'], dict['contributors'], dict['issues'], dict['pull_requests'], dict['watchs'], dict['starts'], dict['forks'], dict['age']))
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (repo_name, dict['commits'], dict['branches'], dict['releases'], dict['contributors'], dict['issues'], dict['pull_requests'], dict['watchs'], dict['starts'], dict['forks'], dict['age'],))
 		self.database.commit()
 
 	def add_user(self, user_name):
 		dict = {'name':0, 'age':-1}
 		c = self.database.cursor()
 		c.execute('''INSERT INTO users (user_name, name, age)
-					VALUES (?, ?, ?)''', (user_name, dict['name'], dict['age']))
+					VALUES (?, ?, ?)''', (user_name, dict['name'], dict['age'],))
 		self.database.commit()
 
 	def add_commit(self, repo_name, user_name, commit=1):
@@ -114,16 +117,16 @@ class GitHubMap:
 
 		if(self.contribution_exists(repo_name, user_name)):
 			c = self.database.cursor()
-			c.execute('''UPDATE contributions SET commits = commits + ?, issues = issues + ? WHERE repo_name=? AND user_name=?''', (commit, issue, repo_name, user_name))
+			c.execute('''UPDATE contributions SET commits = commits + ?, issues = issues + ? WHERE repo_name=? AND user_name=?''', (commit, issue, repo_name, user_name,))
 			self.database.commit()
 		else:
 			c = self.database.cursor()
-			c.execute('''INSERT INTO contributions (repo_name, user_name, commits, issues) VALUES (?, ?, ?, ?)''', (repo_name, user_name, commit, issue))
+			c.execute('''INSERT INTO contributions (repo_name, user_name, commits, issues) VALUES (?, ?, ?, ?)''', (repo_name, user_name, commit, issue,))
 			self.database.commit()
 
 	def get_repo(self, repo_name):
 		c = self.database.cursor()
-		c.execute('''SELECT * FROM repos WHERE repo_name=?''', (repo_name))
+		c.execute('''SELECT * FROM repos WHERE repo_name=?''', (repo_name,))
 		return c.fetchall()
 
 	def get_repos(self):
@@ -133,7 +136,7 @@ class GitHubMap:
 
 	def get_user(self, user_name):
 		c = self.database.cursor()
-		c.execute('''SELECT * FROM users WHERE user_name=?''', (user_name))
+		c.execute('''SELECT * FROM users WHERE user_name=?''', (user_name,))
 		return c.fetchall()
 
 	def get_users(self):
@@ -143,7 +146,7 @@ class GitHubMap:
 
 	def get_contribution(self, repo_name, user_name):
 		c = self.database.cursor()
-		c.execute('''SELECT * FROM contributions WHERE repo_name=? AND user_name=?''', (repo_name, user_name))
+		c.execute('''SELECT * FROM contributions WHERE repo_name=? AND user_name=?''', (repo_name, user_name,))
 		return c.fetchall()
 
 	def get_contributions(self):
@@ -156,6 +159,10 @@ class GitHubMap:
 	###################
 
 	def init_graph(self):
+		print("Creating the graph...")
+
+		pyplot.figure(figsize=(self.INCHES,self.INCHES))
+
 		self.repos = self.get_repos()
 		self.users = self.get_users()
 		self.N = len(self.repos) + len(self.users)
@@ -177,13 +184,15 @@ class GitHubMap:
 			for j in range(self.N):
 				self.A[j][i] = B[i][j]/t
 
+		self.M = self.A*(1-self.EPSILON) + numpy.full((self.N, 1),self.EPSILON/self.N)
+
 		#Weight of every nodes
 		self.W = numpy.full((self.N, 1), 1/len(self.repos))
 
 		#Position of every nodes
 		self.P = (numpy.random.rand(self.N,2)-0.5)*self.MAX_SIZE*5
 
-		return self.A, self.W, self.P
+		return self.A, self.M, self.W, self.P
 
 	def stabilize(self, error_size, error_move, plot=False):
 		if not os.path.exists(self.SAVE_FOLDER):
@@ -193,82 +202,84 @@ class GitHubMap:
 		iter_move = self.stabilize_move(error_move, plot, start_iter=iter_size)[1]
 		return self.A, self.W, self.P, iter_size, iter_move
 
-	def stabilize_size(self, error, plot=False, start_iter=0):
-		for i in range(self.MAX_ITERATIONS):
+	################
+	# PAGE RANKING #
+	################
+
+	def stabilize_size(self, error_size, plot=False, start_iter=0):
+		for i in range(start_iter, self.MAX_ITERATIONS+start_iter):
 			if(plot):
-				self.plot(str(i+start_iter) + self.SAVE_EXTENTION)
+				self.plot(str(i) + self.SAVE_EXTENTION)
 
-			Wn = self.step_size()
-			stop = self.is_size_stabilized(self.W, Wn, error)
-			self.W = Wn
+			self.W, stabilized = self.step_size(error_size)
 
-			if(stop):
+			if(stabilized):
 				break
 
 		return self.W, self.A, i+1
 
-	def step_size(self):
-		return numpy.matmul(self.A, self.W)
+	def step_size(self, error_size):
+		Wn = numpy.matmul(self.M, self.W)
+		stabilized = self.is_size_stabilized(self.W, Wn, error_size)
+		return Wn, stabilized
 
 	def is_size_stabilized(self, W, Wn, error):
 		return False not in (numpy.absolute(numpy.subtract(W, Wn)) < error)
 
-	def stabilize_move(self, error, plot=False, start_iter=0):
+	######################
+	# GRAPH POSITIONNING #
+	######################
 
-		# Get the target
-		T = self.get_target()
+	def stabilize_move(self, error_move, plot=False, start_iter=0):
 		
-		for i in range(self.MAX_ITERATIONS):
+		for i in range(start_iter, self.MAX_ITERATIONS+start_iter):
 			if(plot):
-				self.plot(str(i+start_iter) + self.SAVE_EXTENTION)
+				self.plot(str(i) + self.SAVE_EXTENTION)
 
-			Pn = self.step_move(T)
-			stop = self.is_move_stabilized(self.P, Pn, error)
-			self.P = Pn
+			self.P, stabilized = self.step_move(error_move)
 
-			if(stop):
+			if(stabilized):
 				break
 
 		return self.P, i+1
 
-	def get_target(self):
+
+	def step_move(self, error_move):
+
 		# Calculer S
 		S = self.get_size(self.W)
-
-		# Calculer T
-		T = numpy.zeros((self.N, self.N))
-		for i in range(self.N):
-			for j in range(self.N):
-				if(self.A[j][i] != 0):
-					T[i][j] = S[i] + S[j]
-		return T
-
-	def is_move_stabilized(self, P, Pn, error):
-		return False not in (numpy.absolute(numpy.subtract(P, Pn)) < error)
-
-	def step_move(self, T):
-		Pn = copy.deepcopy(self.P)
 
 		#Get the real distance
 		V = numpy.zeros((self.N, 2), dtype=numpy.ndarray)
 		for i in range(self.N):
 			n = 0
 			for j in range(self.N):
-				if(T[i][j] != 0):
+				if(i != j):
+					target = (S[i] + S[j] + min(S[i], S[j]))/2
 					distance = self.get_distance(self.P[i][0], self.P[i][1], self.P[j][0], self.P[j][1])
-					ratio = (distance - T[i][j])/max(T[i][j], distance)
-					V[i][0] += (self.P[j][0]-self.P[i][0])*ratio
-					V[i][1] += (self.P[j][1]-self.P[i][1])*ratio
-					n+=1
+					ratio = (distance - target)/max(target, distance)
+					if(self.A[i][j] != 0 or target > distance):
+						V[i][0] += (self.P[j][0]-self.P[i][0])*ratio
+						V[i][1] += (self.P[j][1]-self.P[i][1])*ratio
+						n+=1
 
-			V[i][0] = V[i][0]/n
-			V[i][1] = V[i][1]/n
+			V[i][0] = V[i][0]*self.SPEED/n
+			V[i][1] = V[i][1]*self.SPEED/n
 
-		return numpy.add(self.P, V)
+		Pn = numpy.add(self.P, V)
+		stabilized = self.is_move_stabilized(self.P, Pn, error_move)
+		return Pn, stabilized
 
 	def get_distance(self, x1, y1, x2, y2):
 		res = math.sqrt((x1-x2)**2 + (y1-y2)**2)
 		return res
+
+	def is_move_stabilized(self, P, Pn, error):
+		return False not in (numpy.absolute(numpy.subtract(P, Pn)) < error)
+
+	########
+	# PLOT #
+	########
 
 	def plot(self, save_name=None):
 		S = self.get_size(self.W)
@@ -308,14 +319,17 @@ class GitHubMap:
 ########
 
 if __name__ == '__main__':
-	ghm = GitHubMap('MonTest')
-	ghm.add_commit('A','1', 1)
-	ghm.add_commit('A','2', 1)
-	ghm.add_commit('B','2', 2)
-	ghm.add_commit('C','2', 3)
-	ghm.add_commit('C','3', 1)
-	ghm.add_commit('B','1', 2)
+	ghm = GitHubMap('MyTest')
+	# ghm.add_commit('A','1', 1)
+	# ghm.add_commit('A','2', 1)
+	# ghm.add_commit('B','2', 2)
+	# ghm.add_commit('C','2', 3)
+	# ghm.add_commit('C','3', 1)
+	# ghm.add_commit('B','1', 2)
 
-	print(ghm.stabilize(0.001, 0.1, True))
+	# for i in range(0,50):
+	# 	ghm.add_commit('A',str(i))
+
+	ghm.stabilize(1, 0.1, True)
 	ghm.plot()
 
