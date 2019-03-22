@@ -28,7 +28,7 @@ class PageRankGraph:
 	###########
 
 	def __init__(self, name):
-		self.database = sqlite3.connect(str(name)+'.db')
+		self.database = sqlite3.connect(name)
 		self.cursor = self.database.cursor()
 
 		self.cursor.execute('''CREATE TABLE IF NOT EXISTS settings
