@@ -1,5 +1,6 @@
-*.json
-*.pem
 presentations/
-*.sh
 tests/
+**/*.json
+**/*.pem
+**/*.sh
+**/*.pyc
