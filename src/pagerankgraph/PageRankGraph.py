@@ -375,12 +375,7 @@ class PageRankGraph:
 		ax.add_collection(c)
 
 		for i in range(self.N):
-
-			tp1=textpath.TextPath((self.P[i][0] - self.W[i][0]*len(self.nodes[i])/4, self.P[i][1] - self.W[i][0]/4), self.nodes[i], size=self.W[i][0])
-			polygon=tp1.to_polygons()
-			for a in polygon:
-			    p1=patches.Polygon(a, color='black', fill=False)
-			    ax.add_patch(p1)
+			ax.annotate(self.nodes[i], xy=(self.P[i][0], self.P[i][1]), fontsize=self.W[i]*150, va="center", ha="center")
 
 		ax.set_xlim(MIN_X - MAX_W, MAX_X + MAX_W)
 		ax.set_ylim(MIN_Y - MAX_W, MAX_Y + MAX_W)

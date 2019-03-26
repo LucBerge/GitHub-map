@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 from pagerankgraph.PageRankGraph import PageRankGraph
-
+ 
 ghm = PageRankGraph('example')
 
 for i in range(0,50):
