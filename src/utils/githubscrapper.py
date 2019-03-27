@@ -3,40 +3,92 @@
 from mrjob.job import *
 from bs4 import BeautifulSoup
 from selenium import webdriver
+
 import requests, traceback, sqlite3, sys
+
+
+driver = None
+
+def getDriver(visible=False):
+	global driver
+	if driver == None:
+		if visible:
+			return webdriver.Firefox()
+		else:
+			options = webdriver.firefox.options.Options()
+			options.headless = True
+			return webdriver.Firefox(options=options)
+	else:
+		return driver
 
 class ReposScrapper(MRJob):
 
-	file = "/media/lucas/DATA/Lucas/Etudes/ESISAR 2017-2020/Semestre 4 (Norway)/DAT500 - Data intensive systems/Project/sample/gitHubMap.db"
-	driver = None
-	db = None
-	c = None
+	#############
+	# ATTRIBUTS #
+	#############
 
-	def steps(self):
-		return [
-			MRStep(mapper=self.mapper_count,
-				combiner=self.combiner_count,
-				reducer=self.reducer_count),
-			MRStep(mapper_init=self.mapper_init,
-				mapper=self.mapper,
-				mapper_final=self.mapper_final)
-		]
+	repo_name = None
+	commits = None
+	branches = None
+	releases = None
+	contributors = None
+	issues = None
+	pull_requests = None
+	watchs = None
+	stars = None
+	forks = None
+	age = None
 
-	def mapper_count(self, key, repo_name):
-		yield repo_name, 1
+	###########
+	# BUILDER #
+	###########
 
-	def combiner_count(self, repo_name, number):
-		yield repo_name, sum(number)
+	def __init__(self, repo_name):
+		self.repo_name = repo_name
 
-	def reducer_count(self, repo_name, number):
-		yield repo_name, sum(number)
+	###########
+	# GETTERS #
+	###########
 
-	def mapper_init(self):
-		self.driver = webdriver.Firefox()
-		self.db = sqlite3.connect(self.file)
-		self.c = self.db.cursor()
+	def getRepoName(self):
+		return self.repo_name
 
-	def mapper(self, repo_name, number):
+	def getCommits(self):
+		return self.commits
+
+	def getBranches(self):
+		return self.branches
+
+	def getReleases(self):
+		return self.releases
+
+	def getContributors(self):
+		return self.contributors
+
+	def getIssues(self):
+		return self.issues
+
+	def getPullRequests(self):
+		return self.pull_requests
+
+	def getWatchs(self):
+		return self.watchs
+
+	def getStars(self):
+		return self.stars
+
+	def getForks(self):
+		return self.forks
+
+	def getAge(self):
+		return self.age
+
+	###########
+	# METHODS #
+	###########
+
+	def scrap(self, visible=False):
+		self.driver = getDriver(visible)
 		url = 'https://github.com/' + repo_name
 		dict = self.getDictFromRequests(url)
 
@@ -45,13 +97,8 @@ class ReposScrapper(MRJob):
 				print(dict)
 				dict = self.getDictFromSelenium(url)
 
-			self.c.execute('''INSERT INTO repos (repo_name, commits, branches, releases, contributors, issues, pull_requests, watchs, starts, forks, age)
+			self.c.execute('''INSERT INTO repos (repo_name, commits, branches, releases, contributors, issues, pull_requests, watchs, stars, forks, age)
 					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (repo_name, dict['commits'], dict['branches'], dict['releases'], dict['contributors'], dict['issues'], dict['pull_requests'], dict['watchs'], dict['starts'], dict['forks'], dict['age']))
-
-	def mapper_final(self):
-		self.driver.close()
-		self.db.commit()
-		self.db.close()
 
 	def getDictFromRequests(self, url):
 		result = requests.get(url)

@@ -115,7 +115,7 @@ class GitHubDatabase:
 	def remove_user(self, email):
 		self.cursor.execute('''DELETE FROM users WHERE email=?''', (email,))
 
-	def get_user(self):
+	def get_users(self):
 		self.cursor.execute('''SELECT * FROM users''')
 		return self.cursor.fetchall()
 
