@@ -55,7 +55,7 @@ Create a [Google API key](https://cloud.google.com/bigquery/docs/reference/libra
 
 Install the dependencies :
 ```
-sudo pip install google-api-python-client requests bs4 selenium sqlite3 mrjob
+sudo pip3 install google-api-python-client requests bs4 selenium sqlite3 mrjob matplotlib
 ```
 ## Contributing
 
