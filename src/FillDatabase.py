@@ -11,7 +11,7 @@ out = os.popen('echo $GOOGLE_APPLICATION_CREDENTIALS').read()
 assert (GOOGLE_KEY in out), 'Please type [export GOOGLE_APPLICATION_CREDENTIALS=' + GOOGLE_KEY + '] in the console.'
 
 def addReposFromScrapping(db):
-	file = open("repos_scrapping.txt","r")
+	file = open("data/repos_scrapping.txt","r")
 	counter = 1
 
 	for line in file.readlines():

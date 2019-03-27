@@ -1,8 +1,8 @@
 #!/usr/bin/python
 
-from pagerankgraph.PageRankGraph import PageRankGraph
+from utils import pagerankgraph
 
-ghm = PageRankGraph('example')
+ghm = pagerankgraph.PageRankGraph('example')
 
 ### START ###
 
