@@ -80,7 +80,7 @@ class ReposScrapper(MRJob):
 		dict['issues'] = getIssues(html)				#4
 		dict['pull_requests'] = getPullRequests(html)	#5
 		dict['watchs'] = getWatchs(html)				#6
-		dict['starts'] = getStars(html)					#7
+		dict['stars'] = getStars(html)					#7
 		dict['forks'] = getForks(html)					#8
 		return dict
 

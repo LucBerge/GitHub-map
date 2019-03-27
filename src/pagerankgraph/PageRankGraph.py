@@ -8,7 +8,7 @@ class PageRankGraph:
 
 	# CONSTANTS
 
-	MAX_ITERATIONS = 50
+	MAX_ITERATIONS = 300
 
 	EPSILON = 0.1
 	SPEED = 0.5
@@ -129,7 +129,7 @@ class PageRankGraph:
 	def set_iteration(self, iteration):
 		self.cursor.execute('''UPDATE settings SET iteration=? WHERE id=0''', (iteration,))
 
-	def set_iteration(self, stabilized):
+	def set_stabilized(self, stabilized):
 		self.cursor.execute('''UPDATE settings SET stabilized=? WHERE id=0''', (stabilized,))
 
 	###############
@@ -224,7 +224,7 @@ class PageRankGraph:
 		for i in range(self.N):
 			t = numpy.sum(B[i])
 			for j in range(self.N):
-				A[j][i] = B[i][j]/t
+				A[j][i] = B[i][j]/t if t!=0 else 0
 
 		self.M = A*(1-self.EPSILON) + numpy.full((self.N, 1),self.EPSILON/self.N)
 		self.not_linked_value = numpy.amin(self.M)
@@ -290,6 +290,7 @@ class PageRankGraph:
 		self.iteration+=i
 
 		self.save_graph()
+		self.set_stabilized(True)
 
 		return self.M, self.W, self.P, self.iteration+1
 
@@ -329,21 +330,46 @@ class PageRankGraph:
 				if(i != j):
 					target = self.W[i][0] + self.W[j][0] + min(self.W[i][0], self.W[j][0])
 					distance = self.get_distance(self.P[i][0], self.P[i][1], self.P[j][0], self.P[j][1])
-					ratio = (distance - target)/max(target, distance)
+					
+					### OTHER ###
 
-					if(target > distance) and repulsion:
-						V[i][0] += (self.P[j][0]-self.P[i][0])*ratio*5
-						V[i][1] += (self.P[j][1]-self.P[i][1])*ratio*5
-						n+=1
+					# Spring
+
+					if(self.M[i][j] != self.not_linked_value):
+						spring_amplitude = abs(distance - target)
+					else:
+						spring_amplitude = 0
+
+					# Vertex Vertex
+					if target > distance:
+						repulsion_amplitude = -1/distance
+					else:
+						repulsion_amplitude = -1/(distance**2)
+
+					# Total
+					total_amplitude = spring_amplitude + repulsion_amplitude
+
+
+					V[i] += (self.P[j]-self.P[i])*total_amplitude
+					n+=1
+
+					### ORIGINAL ###
+
+					# ratio = (distance - target)/max(target, distance)
+
+					# if(target > distance) and repulsion:
+					# 	V[i] += (self.P[j]-self.P[i])*ratio*5
+					# 	n+=1
 						
-					elif(self.M[i][j] != self.not_linked_value):
-						V[i][0] += (self.P[j][0]-self.P[i][0])*ratio
-						V[i][1] += (self.P[j][1]-self.P[i][1])*ratio
-						n+=1
+					# elif(self.M[i][j] != self.not_linked_value):
+					# 	V[i] += (self.P[j]-self.P[i])*ratio
+					# 	n+=1
 
 			if n:
-				V[i][0] = V[i][0]*self.SPEED/n
-				V[i][1] = V[i][1]*self.SPEED/n
+				V[i] = V[i]*self.SPEED/n
+				if(True):
+					print("total=" + str(V[i]))
+
 
 		Pn = numpy.add(self.P, V)
 		stabilized = self.is_move_stabilized(self.P, Pn, error_move)
@@ -352,6 +378,14 @@ class PageRankGraph:
 	def get_distance(self, x1, y1, x2, y2):
 		res = math.sqrt((x1-x2)**2 + (y1-y2)**2)
 		return res
+
+	def sat(self, value, min, max):
+		if value < min:
+			return min
+		elif value > max:
+			return max
+		else:
+			return value
 
 	def is_move_stabilized(self, P, Pn, error):
 		return False not in (numpy.absolute(numpy.subtract(P, Pn)) < error)
@@ -370,7 +404,7 @@ class PageRankGraph:
 		
 		fig, ax = pyplot.subplots()
 
-		circles = [pyplot.Circle((self.P[i][0],self.P[i][1]), radius=self.W[i][0], linewidth=0) for i in range(self.N)]
+		circles = [pyplot.Circle((self.P[i][0],self.P[i][1]), radius=self.W[i], linewidth=0) for i in range(self.N)]
 		c = collections.PatchCollection(circles)
 		ax.add_collection(c)
 
