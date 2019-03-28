@@ -36,9 +36,8 @@ def addReposFromScrapping(db):
 
 	file.close()
 
-def addUsersFromCommits(db):
+def addUsersFromCommits(db, offset=0):
 	MAX = 10
-	offset = 0
 
 	while(True):
 		query = """
@@ -56,7 +55,6 @@ def addUsersFromCommits(db):
 		for row in results:
 
 			nb_rows+=1
-			print(nb_rows)
 
 			email = row['committer']['email']
 			name = row['committer']['name']
@@ -70,11 +68,12 @@ def addUsersFromCommits(db):
 			break
 
 		offset += nb_rows
+		print(offset)
 
 if __name__ == '__main__':
 	db = GitHubDatabase("GitHubMap.db")
 	try:
-		addUsersFromCommits(db)
+		addUsersFromCommits(db, 300000)
 	except KeyboardInterrupt:
 		pass
 	except :

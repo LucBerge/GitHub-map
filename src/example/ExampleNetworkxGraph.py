@@ -47,47 +47,49 @@ G=nx.Graph()
 # for i in range(50,100):
 # 	G.add_edge(str(i),'B')
 
-G.add_edge('A','B')
-G.add_edge('B','C')
-G.add_edge('C','D')
-G.add_edge('D','E')
-G.add_edge('E','F')
-G.add_edge('F','G')
-G.add_edge('G','H')
-G.add_edge('H','I')
-G.add_edge('I','J')
-G.add_edge('J','K')
-G.add_edge('K','L')
-G.add_edge('L','M')
-G.add_edge('M','N')
-G.add_edge('N','O')
-G.add_edge('O','A')
+# G.add_edge('A','B')
+# G.add_edge('B','C')
+# G.add_edge('C','D')
+# G.add_edge('D','E')
+# G.add_edge('E','F')
+# G.add_edge('F','G')
+# G.add_edge('G','H')
+# G.add_edge('H','I')
+# G.add_edge('I','J')
+# G.add_edge('J','K')
+# G.add_edge('K','L')
+# G.add_edge('L','M')
+# G.add_edge('M','N')
+# G.add_edge('N','O')
+# G.add_edge('O','A')
 
-# NB_CONNECTIONS = 1000
+NB_CONNECTIONS = 1000
 
-# MAX_COMMITS = 100
-# REPOS = []
-# USERS = []
+MAX_COMMITS = 100
+REPOS = []
+USERS = []
 
-# for letter in ascii_uppercase:
-# 	REPOS.append(letter)
+for letter in ascii_uppercase:
+	REPOS.append(letter)
 
-# for user in range(500):
-# 	USERS.append(str(user))
+for user in range(500):
+	USERS.append(str(user))
 
-# for i in range(NB_CONNECTIONS):
-# 	user = random.choice(USERS)
-# 	repo = random.choice(REPOS)
-# 	commits = random.randint(0, MAX_COMMITS)
-# 	G.add_edge(user,repo, w=commits)
+for i in range(NB_CONNECTIONS):
+	user = random.choice(USERS)
+	repo = random.choice(REPOS)
+	commits = random.randint(0, MAX_COMMITS)
+	G.add_edge(user,repo, w=commits)
 
-nx.draw(G)
 
 ### WITH PAGE RANK ###
 
+nx.draw(G)
+
 weight = nx.pagerank(G)
 nodes = nx.spring_layout(G,k=0.15,iterations=1000, weight=weight.values())
-plot(list(nodes.keys()), list(nodes.values()), list(weight.values()), 'networkxPlot.png')
+plot(list(nodes.keys()), list(nodes.values()), list(weight.values()))
+
 
 ### WITHOUT PAGERANK ###
 

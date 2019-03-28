@@ -21,7 +21,13 @@ def getDriver(visible=False):
 	else:
 		return driver
 
-class ReposScrapper(MRJob):
+class CannotScrapRepoException(Exception):
+	pass
+
+class PageNotLoadedException(Exception):
+	pass
+
+class ReposScrapper():
 
 	#############
 	# ATTRIBUTS #
@@ -88,150 +94,137 @@ class ReposScrapper(MRJob):
 	###########
 
 	def scrap(self, visible=False):
-		self.driver = getDriver(visible)
-		url = 'https://github.com/' + repo_name
-		dict = self.getDictFromRequests(url)
+		url = 'https://github.com/' + self.repo_name
 
-		if(dict != None):
-			while('-1' in dict.values()):
-				print(dict)
-				dict = self.getDictFromSelenium(url)
+		try:
+			self.getValuesFromRequests(self.repo_name, url)
+		except PageNotLoadedException:
+			self.getValuesFromSelenium(url, visible)
 
-			self.c.execute('''INSERT INTO repos (repo_name, commits, branches, releases, contributors, issues, pull_requests, watchs, stars, forks, age)
-					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (repo_name, dict['commits'], dict['branches'], dict['releases'], dict['contributors'], dict['issues'], dict['pull_requests'], dict['watchs'], dict['starts'], dict['forks'], dict['age']))
-
-	def getDictFromRequests(self, url):
+	def getValuesFromRequests(self, repo_name, url):
 		result = requests.get(url)
 		if(result.status_code == 200):
-			dict = self.getDict(result.content)
-			dict['age'] = getAge(url)
-			return dict
+			self.getValues(url, result.content)
+		elif result.status_code == 404:
+			raise CannotScrapRepoException("Could not scrap the repo '" + repo_name + "'. Repo does not exists.")
 		else:
-			return None
+			raise CannotScrapRepoException("Could not scrap the repo '" + repo_name + "'. Unknow error code : " + str(result.status_code))
 
-	def getDictFromSelenium(self, url):
-		self.driver.get(url)
-		self.driver.execute_script("return document.readyState")
-		html = self.driver.page_source
-		dict = self.getDict(html)
-		dict['age'] = getAge(url)
-		return dict
+	def getValuesFromSelenium(self, url, visible):
+		driver = getDriver(visible)
+		driver.get(url)
+		driver.execute_script("return document.readyState")
+		self.getValues(url, driver.page_source)
+		driver.close()
 
-	def getDict(self, html):
+	def getValues(self, url, html):
 		html = BeautifulSoup(html, 'html.parser')
-		dict = {}
-		dict['commits'] = getCommits(html)				#0
-		dict['branches'] = getBranches(html)			#1
-		dict['releases'] = getReleases(html)			#2
-		dict['contributors'] = getContributors(html)	#3
-		dict['issues'] = getIssues(html)				#4
-		dict['pull_requests'] = getPullRequests(html)	#5
-		dict['watchs'] = getWatchs(html)				#6
-		dict['stars'] = getStars(html)					#7
-		dict['forks'] = getForks(html)					#8
-		return dict
+		self.getCommits(html)				#0
+		self.getBranches(html)				#1
+		self.getReleases(html)				#2
+		self.getContributors(html)			#3
+		self.getIssues(html)				#4
+		self.getPullRequests(html)			#5
+		self.getWatchs(html)				#6
+		self.getStars(html)					#7
+		self.getForks(html)					#8
+		self.getAge(url)
 
-#SCRAPPING FUNCTIONS
+	#SCRAPPING FUNCTIONS
 
-def getCommits(html):
-	try:
-		li = html.find_all("li", class_="commits")
-		return li[0].a.span.string.strip().replace(',','')
-	except IndexError:
-		return "0"
-	except AttributeError:
-		return "-1"
-
-def getBranches(html):
-	try:
-		svg = html.find_all("svg", class_="octicon-git-branch")
-		return svg[0].parent.span.string.strip().replace(',','')
-	except IndexError:
-		return "0"
-	except AttributeError:
-		return "-1"
-
-def getReleases(html):
-	try:
-		svg = html.find_all("svg", class_="octicon-tag")
-		return svg[0].parent.span.string.strip().replace(',','')
-	except IndexError:
-		return "0"
-	except AttributeError:
-		return "-1"
-
-def getContributors(html):
-	try:
-		svg = html.find_all("svg", class_="octicon-organization")
-		return svg[0].parent.span.string.strip().replace(',','')
-	except IndexError:
-		return "0"
-	except AttributeError:
-		return "-1"
-
-def getIssues(html):
-	try:
-		svg = html.find_all("svg", class_="octicon-issue-opened")
-		span = svg[0].parent.find_all("span", class_="Counter")
-		return span[0].string.strip().replace(',','')
-	except IndexError:
-		return "0"
-	except AttributeError, ValueError:
-		return "-1"
-
-def getPullRequests(html):
-	try:
-		svg = html.find_all("svg", class_="octicon-git-pull-request")
-		span = svg[0].parent.find_all("span", class_="Counter")
-		return span[0].string.strip().replace(',','')
-	except IndexError:
-		return "0"
-	except AttributeError, ValueError:
-		return "-1"
-
-def getWatchs(html):
-	try:
-		ul = html.find_all("ul", class_="pagehead-actions")
-		a = ul[0].find_all("a", class_="social-count")
-		return a[0].string.strip().replace(',','')
-	except IndexError:
-		return "0"
-	except AttributeError:
-		return "-1"
-
-def getStars(html):
-	try:
-		ul = html.find_all("ul", class_="pagehead-actions")
-		a = ul[0].find_all("a", class_="social-count")
-		return a[1].string.strip().replace(',','')
-	except IndexError:
-		return "0"
-	except AttributeError:
-		return "-1"
-	
-def getForks(html):
-	try:
-		ul = html.find_all("ul", class_="pagehead-actions")
-		a = ul[0].find_all("a", class_="social-count")
-		return a[2].string.strip().replace(',','')
-	except IndexError:
-		return "0"
-	except AttributeError:
-		return "-1"
-
-def getAge(url):
-	try:
-		return "0"
-	except IndexError:
-		return "0"
-	except AttributeError:
-		return "-1"
-
-if __name__ == '__main__':
-	if(len(sys.argv) == 2):
+	def getCommits(self, html):
 		try:
-			ReposScrapper.run()
-		except KeyboardInterrupt:
-			pass
-	else:
-		print("Usage 'python " + sys.argv[0].replace('./','') + " repos.txt'")
+			li = html.find_all("li", class_="commits")
+			self.commits = li[0].a.span.string.strip().replace(',','').encode('utf8')
+		except IndexError:
+			self.commits =  "0"
+		except AttributeError:
+			raise PageNotLoadedException("Could not scrap commits. Is the page fully loaded ?")
+
+	def getBranches(self, html):
+		try:
+			svg = html.find_all("svg", class_="octicon-git-branch")
+			self.releases = svg[0].parent.span.string.strip().replace(',','').encode('utf8')
+		except IndexError:
+			self.releases =  "0"
+		except AttributeError:
+			raise PageNotLoadedException("Could not scrap branches. Is the page fully loaded ?")
+
+	def getReleases(self, html):
+		try:
+			svg = html.find_all("svg", class_="octicon-tag")
+			self.releases = svg[0].parent.span.string.strip().replace(',','').encode('utf8')
+		except IndexError:
+			self.releases =  "0"
+		except AttributeError:
+			raise PageNotLoadedException("Could not scrap releases. Is the page fully loaded ?")
+
+	def getContributors(self, html):
+		try:
+			svg = html.find_all("svg", class_="octicon-organization")
+			self.contributors = svg[0].parent.span.string.strip().replace(',','').encode('utf8')
+		except IndexError:
+			self.contributors =  "0"
+		except AttributeError:
+			raise PageNotLoadedException("Could not scrap contributors. Is the page fully loaded ?")
+
+	def getIssues(self, html):
+		try:
+			svg = html.find_all("svg", class_="octicon-issue-opened")
+			span = svg[0].parent.find_all("span", class_="Counter")
+			self.issues = span[0].string.strip().replace(',','').encode('utf8')
+		except IndexError:
+			self.issues =  "0"
+		except AttributeError:
+			raise PageNotLoadedException("Could not scrap issues. Is the page fully loaded ?")
+
+	def getPullRequests(self, html):
+		try:
+			svg = html.find_all("svg", class_="octicon-git-pull-request")
+			span = svg[0].parent.find_all("span", class_="Counter")
+			self.pull_requests = span[0].string.strip().replace(',','').encode('utf8')
+		except IndexError:
+			self.pull_requests =  "0"
+		except AttributeError:
+			raise PageNotLoadedException("Could not scrap pull requests. Is the page fully loaded ?")
+
+	def getWatchs(self, html):
+		try:
+			ul = html.find_all("ul", class_="pagehead-actions")
+			a = ul[0].find_all("a", class_="social-count")
+			self.watchs = a[0].string.strip().replace(',','').encode('utf8')
+		except IndexError:
+			self.watchs =  "0"
+		except AttributeError:
+			raise PageNotLoadedException("Could not scrap watchs. Is the page fully loaded ?")
+
+	def getStars(self, html):
+		try:
+			ul = html.find_all("ul", class_="pagehead-actions")
+			a = ul[0].find_all("a", class_="social-count")
+			self.stars = a[1].string.strip().replace(',','').encode('utf8')
+		except IndexError:
+			self.stars =  "0"
+		except AttributeError:
+			raise PageNotLoadedException("Could not scrap stars. Is the page fully loaded ?")
+		
+	def getForks(self, html):
+		try:
+			ul = html.find_all("ul", class_="pagehead-actions")
+			a = ul[0].find_all("a", class_="social-count")
+			self.forks = a[2].string.strip().replace(',','').encode('utf8')
+		except IndexError:
+			self.forks =  "0"
+		except AttributeError:
+			raise PageNotLoadedException("Could not scrap forks. Is the page fully loaded ?")
+
+	def getAge(self, url):
+		try:
+			self.age = "0".encode('utf8')
+		except IndexError:
+			self.age =  "0"
+		except AttributeError:
+			raise PageNotLoadedException("Could not scrap age. Is the page fully loaded ?")
+
+	def __str__(self):
+		return self.repo_name + ": commits(" + str(self.commits) + ") branches(" + str(self.branches) + ") releases(" + str(self.releases) + ") contributors(" + str(self.contributors) + ") issues(" + str(self.issues) + ") pull_requests(" + str(self.pull_requests) + ") watchs(" + str(self.watchs) + ") stars(" + str(self.stars) + ") forks(" + str(self.forks) + ") age(" + str(self.age) + ")"

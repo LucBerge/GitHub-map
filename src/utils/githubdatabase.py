@@ -19,6 +19,7 @@ class GitHubDatabase:
 
 		self.cursor.execute('''CREATE TABLE IF NOT EXISTS repos
              (repo_name text NOT NULL,
+             weight int  DEFAULT 0,
              commits text,
              branches text,
              releases text,
@@ -33,6 +34,7 @@ class GitHubDatabase:
 
 		self.cursor.execute('''CREATE TABLE IF NOT EXISTS users
              (email text NOT NULL,
+             weight int DEFAULT 0,
              name text,
              age text,
              PRIMARY KEY(email))''')
@@ -40,7 +42,7 @@ class GitHubDatabase:
 		self.cursor.execute('''CREATE TABLE IF NOT EXISTS links
              (repo_name text NOT NULL,
              email text NOT NULL,
-             commits int,
+             commits int  DEFAULT 1,
              PRIMARY KEY(repo_name, email),
              FOREIGN KEY(repo_name) REFERENCES repos(repo_name),
              FOREIGN KEY(email) REFERENCES users(email))''')
@@ -63,6 +65,9 @@ class GitHubDatabase:
 
 	def update_repo(self, repo_name, commits, branches, releases, contributors, issues, pull_requests, watchs, stars, forks, age):
 		self.cursor.execute('''UPDATE repos SET commits=?, branches=?, releases=?, contributors=?, issues=?, pull_requests=?, watchs=?, stars=?, forks=?, age=? WHERE repo_name=?''', (commits, branches, releases, contributors, issues, pull_requests, watchs, stars, forks, age, repo_name,))
+
+	def update_repo_weight(self, repo_name, weight):
+		self.cursor.execute('''UPDATE repos SET weight=? WHERE repo_name=?''', (weight, repo_name,))
 
 	def remove_repo(self, repo_name):
 		self.cursor.execute('''DELETE FROM repos WHERE repo_name=?''', (repo_name,))
@@ -91,7 +96,7 @@ class GitHubDatabase:
 		self.cursor.execute('''UPDATE links SET commits=? WHERE repo_name=? AND email=?''', (commits, repo_name, email,))
 
 	def remove_link(self, repo_name, email):
-		self.cursor.execute('''DELETE FROM links WHERE repo_name=? AND email=?''', (repo_name, email))
+		self.cursor.execute('''DELETE FROM links WHERE repo_name=? AND email=?''', (repo_name, email,))
 
 	def get_links(self):
 		self.cursor.execute('''SELECT * FROM links''')
@@ -112,6 +117,9 @@ class GitHubDatabase:
 	def update_user(self, email, name, age):
 		self.cursor.execute('''UPDATE users SET name=?, age=? WHERE email=?''', (name, age, email,))
 
+	def update_user_weight(self, email, weight):
+		self.cursor.execute('''UPDATE users SET weight=? WHERE email=?''', (weight, email,))
+
 	def remove_user(self, email):
 		self.cursor.execute('''DELETE FROM users WHERE email=?''', (email,))
 
@@ -119,7 +127,21 @@ class GitHubDatabase:
 		self.cursor.execute('''SELECT * FROM users''')
 		return self.cursor.fetchall()
 
-	###############
-	# USERS TABLE #
-	###############
+	#################
+	# METHODS TABLE #
+	#################
 
+	def get_neighbours(self, repo_name_or_email):
+		result = get_repos_where_user_is(repo_name_or_email)
+		if len(result) == 0:
+			return get_users_where_repo_is(repo_name_or_email)
+		else:
+			return result
+
+	def get_repos_where_user_is(self, email):
+		self.cursor.execute('''SELECT repo_name, commits FROM links WHERE email=?''',(email,))
+		return self.cursor.fetchall()
+
+	def get_users_where_repo_is(self, repo_name):
+		self.cursor.execute('''SELECT email, commits FROM links WHERE repo_name=?''',(repo_name,))
+		return self.cursor.fetchall()
