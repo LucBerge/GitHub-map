@@ -27,7 +27,7 @@ class CannotScrapRepoException(Exception):
 class PageNotLoadedException(Exception):
 	pass
 
-class ReposScrapper():
+class RepoScrapper():
 
 	#############
 	# ATTRIBUTS #
@@ -99,7 +99,15 @@ class ReposScrapper():
 		try:
 			self.getValuesFromRequests(self.repo_name, url)
 		except PageNotLoadedException:
-			self.getValuesFromSelenium(url, visible)
+			exit = False
+			driver = getDriver(visible)
+			while(not exit):
+				try:
+					self.getValuesFromSelenium(driver, url, visible)
+					exit = True
+				except PageNotLoadedException:
+					pass
+			driver.close()
 
 	def getValuesFromRequests(self, repo_name, url):
 		result = requests.get(url)
@@ -110,29 +118,27 @@ class ReposScrapper():
 		else:
 			raise CannotScrapRepoException("Could not scrap the repo '" + repo_name + "'. Unknow error code : " + str(result.status_code))
 
-	def getValuesFromSelenium(self, url, visible):
-		driver = getDriver(visible)
+	def getValuesFromSelenium(self, driver, url, visible):
 		driver.get(url)
 		driver.execute_script("return document.readyState")
 		self.getValues(url, driver.page_source)
-		driver.close()
 
 	def getValues(self, url, html):
 		html = BeautifulSoup(html, 'html.parser')
-		self.getCommits(html)				#0
-		self.getBranches(html)				#1
-		self.getReleases(html)				#2
-		self.getContributors(html)			#3
-		self.getIssues(html)				#4
-		self.getPullRequests(html)			#5
-		self.getWatchs(html)				#6
-		self.getStars(html)					#7
-		self.getForks(html)					#8
-		self.getAge(url)
+		self.scrapCommits(html)				#0
+		self.scrapBranches(html)			#1
+		self.scrapReleases(html)			#2
+		self.scrapContributors(html)		#3
+		self.scrapIssues(html)				#4
+		self.scrapPullRequests(html)		#5
+		self.scrapWatchs(html)				#6
+		self.scrapStars(html)				#7
+		self.scrapForks(html)				#8
+		self.scrapAge(url)
 
 	#SCRAPPING FUNCTIONS
 
-	def getCommits(self, html):
+	def scrapCommits(self, html):
 		try:
 			li = html.find_all("li", class_="commits")
 			self.commits = li[0].a.span.string.strip().replace(',','').encode('utf8')
@@ -141,16 +147,16 @@ class ReposScrapper():
 		except AttributeError:
 			raise PageNotLoadedException("Could not scrap commits. Is the page fully loaded ?")
 
-	def getBranches(self, html):
+	def scrapBranches(self, html):
 		try:
 			svg = html.find_all("svg", class_="octicon-git-branch")
-			self.releases = svg[0].parent.span.string.strip().replace(',','').encode('utf8')
+			self.branches = svg[0].parent.span.string.strip().replace(',','').encode('utf8')
 		except IndexError:
-			self.releases =  "0"
+			self.branches =  "0"
 		except AttributeError:
 			raise PageNotLoadedException("Could not scrap branches. Is the page fully loaded ?")
 
-	def getReleases(self, html):
+	def scrapReleases(self, html):
 		try:
 			svg = html.find_all("svg", class_="octicon-tag")
 			self.releases = svg[0].parent.span.string.strip().replace(',','').encode('utf8')
@@ -159,7 +165,7 @@ class ReposScrapper():
 		except AttributeError:
 			raise PageNotLoadedException("Could not scrap releases. Is the page fully loaded ?")
 
-	def getContributors(self, html):
+	def scrapContributors(self, html):
 		try:
 			svg = html.find_all("svg", class_="octicon-organization")
 			self.contributors = svg[0].parent.span.string.strip().replace(',','').encode('utf8')
@@ -168,7 +174,7 @@ class ReposScrapper():
 		except AttributeError:
 			raise PageNotLoadedException("Could not scrap contributors. Is the page fully loaded ?")
 
-	def getIssues(self, html):
+	def scrapIssues(self, html):
 		try:
 			svg = html.find_all("svg", class_="octicon-issue-opened")
 			span = svg[0].parent.find_all("span", class_="Counter")
@@ -178,7 +184,7 @@ class ReposScrapper():
 		except AttributeError:
 			raise PageNotLoadedException("Could not scrap issues. Is the page fully loaded ?")
 
-	def getPullRequests(self, html):
+	def scrapPullRequests(self, html):
 		try:
 			svg = html.find_all("svg", class_="octicon-git-pull-request")
 			span = svg[0].parent.find_all("span", class_="Counter")
@@ -188,7 +194,7 @@ class ReposScrapper():
 		except AttributeError:
 			raise PageNotLoadedException("Could not scrap pull requests. Is the page fully loaded ?")
 
-	def getWatchs(self, html):
+	def scrapWatchs(self, html):
 		try:
 			ul = html.find_all("ul", class_="pagehead-actions")
 			a = ul[0].find_all("a", class_="social-count")
@@ -198,7 +204,7 @@ class ReposScrapper():
 		except AttributeError:
 			raise PageNotLoadedException("Could not scrap watchs. Is the page fully loaded ?")
 
-	def getStars(self, html):
+	def scrapStars(self, html):
 		try:
 			ul = html.find_all("ul", class_="pagehead-actions")
 			a = ul[0].find_all("a", class_="social-count")
@@ -208,7 +214,7 @@ class ReposScrapper():
 		except AttributeError:
 			raise PageNotLoadedException("Could not scrap stars. Is the page fully loaded ?")
 		
-	def getForks(self, html):
+	def scrapForks(self, html):
 		try:
 			ul = html.find_all("ul", class_="pagehead-actions")
 			a = ul[0].find_all("a", class_="social-count")
@@ -218,7 +224,7 @@ class ReposScrapper():
 		except AttributeError:
 			raise PageNotLoadedException("Could not scrap forks. Is the page fully loaded ?")
 
-	def getAge(self, url):
+	def scrapAge(self, url):
 		try:
 			self.age = "0".encode('utf8')
 		except IndexError:

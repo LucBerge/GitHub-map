@@ -131,17 +131,10 @@ class GitHubDatabase:
 	# METHODS TABLE #
 	#################
 
-	def get_neighbours(self, repo_name_or_email):
-		result = get_repos_where_user_is(repo_name_or_email)
-		if len(result) == 0:
-			return get_users_where_repo_is(repo_name_or_email)
-		else:
-			return result
-
-	def get_repos_where_user_is(self, email):
+	def get_neighbour_repos(self, email):
 		self.cursor.execute('''SELECT repo_name, commits FROM links WHERE email=?''',(email,))
 		return self.cursor.fetchall()
 
-	def get_users_where_repo_is(self, repo_name):
+	def get_neighbour_users(self, repo_name):
 		self.cursor.execute('''SELECT email, commits FROM links WHERE repo_name=?''',(repo_name,))
 		return self.cursor.fetchall()
