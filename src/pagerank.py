@@ -7,62 +7,94 @@ from utils import githubdatabase
 
 class PageRank(MRJob):
 
-	EPSILON = 0.15
-	MAX_STEP = 1
-	INITIALIZED = False
+	# CONSTANTS
 
-	db_name = '/media/lucas/DATA/Lucas/Etudes/ESISAR 2017-2020/Semestre 4 (Norway)/DAT500 - Data intensive systems/Project/src/test.db'
+	EPSILON = 0.15
+	MAX_STEP = 20
+	DATABASE_NAME = '/media/lucas/DATA/Lucas/Etudes/ESISAR 2017-2020/Semestre 4 (Norway)/DAT500 - Data intensive systems/Project/src/test.db'
+
+	# VARIABLES
+
 	db = None
 
 	def steps(self):
 		steps = [MRStep(mapper_init=self.open_database, mapper=self.get_weight, mapper_final=self.close_database)]
 
 		for i in range(self.MAX_STEP):
-			steps.append(MRStep(mapper_init=self.open_database,
+			steps.append(MRStep(mapper_init=self.mapper_pagerank_init,
 								mapper=self.mapper_pagerank,
 								mapper_final=self.close_database,
 								combiner=self.combiner_pagerank,
 								reducer=self.reducer_pagerank))
 
-		#steps.append(MRStep(mapper_init=self.open_database, mapper=self.save_weight, mapper_final=self.close_database))
+		steps.append(MRStep(mapper_init=self.open_database, mapper=self.save_weight, mapper_final=self.close_database))
 		return steps
 
 	def open_database(self):
-		self.db = githubdatabase.GitHubDatabase(self.db_name)
+		self.db = githubdatabase.GitHubDatabase(self.DATABASE_NAME)
 
 	def close_database(self):
 		self.db.close()
 
 	def get_weight(self, key, value):
 
-		if not self.INITIALIZED:
-			self.INITIALIZED = True
+		repos = [repo[0] for repo in self.db.get_repos()] #Get all repo names
+		users = [user[0] for user in self.db.get_users()] #Get all user emails
 
-			repos = self.db.get_repos()
-			users = self.db.get_users()
+		initial_weight = 1/(len(repos) + len(users))
 
-			initial_weight = 1/(len(repos) + len(users))
+		for repo in repos:
+			yield get_node_as_dictionnary(repo, 'repo'), initial_weight
 
-			for repo in repos:
-				yield get_node_as_dictionnary(repo[0], 'repo'), initial_weight
+		for user in users:
+			yield get_node_as_dictionnary(user, 'user'), initial_weight,
 
-			for user in users:
-				yield get_node_as_dictionnary(user[0], 'user'), initial_weight,
-
-	# self.M = A*(1-self.EPSILON) + numpy.full((self.N, 1),self.EPSILON/self.N)
+	def mapper_pagerank_init(self):
+		self.open_database()
+		self.repos = [repo[0] for repo in self.db.get_repos()] #Get all repo names
+		self.users = [user[0] for user in self.db.get_users()] #Get all user emails
+		self.min_factor = self.EPSILON/(len(self.repos) + len(self.users))
 
 	def mapper_pagerank(self, node, weight):
 		if node['type'] == "user":
-			repos = self.db.get_repos_where_user_is(node['name'])
-			total_commits = sum([commits for repo, commits in repos])
-			for repo, commits in repos:
-				yield get_node_as_dictionnary(repo, 'repo'), weight*commits/total_commits
+			neighbour_repos = self.db.get_neighbour_repos(node['name'])
+
+			#Give his weight*factor*(1-Epsilon) to neighbour repos
+			total_commits = sum([commits for repo, commits in neighbour_repos])
+			for repo, commits in neighbour_repos:
+				yield get_node_as_dictionnary(repo, 'repo'), weight*(commits/total_commits*(1-self.EPSILON) + self.min_factor)
+
+			# Get non neighbour repos
+			neighbour_repos = [repo[0] for repo in neighbour_repos]
+			not_neighbour_repos = [repo for repo in self.repos if repo not in neighbour_repos]
+
+			#Give the minimum factor to non neighbour repos
+			for repo in not_neighbour_repos:
+				yield get_node_as_dictionnary(repo, 'repo'), weight*self.min_factor
+
+			#Give the minimum factor to all users
+			for user in self.users:
+				yield get_node_as_dictionnary(user, 'user'), weight*self.min_factor
 
 		else:
-			users = self.db.get_users_where_repo_is(node['name'])
-			total_commits = sum([commits for user, commits in users])
-			for user, commits in users:
-				yield get_node_as_dictionnary(user, 'user'), weight*commits/total_commits
+			#Give his weight*factor*(1-Epsilon) to all neighbour users
+			neighbour_users = self.db.get_neighbour_users(node['name'])
+
+			total_commits = sum([commits for user, commits in neighbour_users])
+			for user, commits in neighbour_users:
+				yield get_node_as_dictionnary(user, 'user'), weight*(commits/total_commits*(1-self.EPSILON) + self.min_factor)
+
+			# Get non neighbour users
+			neighbour_users = [user[0] for user in neighbour_users]
+			not_neighbour_users = [user for user in self.users if user not in neighbour_users]
+
+			#Give the minimum factor to non neighbour users
+			for user in not_neighbour_users:
+				yield get_node_as_dictionnary(user, 'user'), weight*self.min_factor
+
+			#Give the minimum factor to all repos
+			for repo in self.repos:
+				yield get_node_as_dictionnary(repo, 'repo'), weight*self.min_factor
 
 	def combiner_pagerank(self, node, weights):
 		yield node, sum(weights)
