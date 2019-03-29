@@ -1,5 +1,4 @@
 presentations/
-tests/
 **/*.json
 **/*.pem
 **/*.sh
