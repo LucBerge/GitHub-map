@@ -8,13 +8,13 @@ class PageRankGraph:
 
 	# CONSTANTS
 
-	MAX_ITERATIONS = 500
+	MAX_ITERATIONS = 2000
 
 	EPSILON = 0.1
 	SPEED = 1
 
-	OUTPUT_FOLDER = 'plot/'
-	OUTPUT_EXTENTION = '.png'
+	OUTPUT_FOLDER = None
+	OUTPUT_EXTENTION = None
 
 	# VARIABLES
 
@@ -36,7 +36,7 @@ class PageRankGraph:
 	             epsilon FLOAT DEFAULT 0.1,
 	             speed FLOAT DEFAULT 0.5,
 	             output_folder TEXT DEFAULT "plot/",
-	             output_extension TEXT DEFAULT ".png",
+	             output_extension TEXT DEFAULT ".svg",
 	             iteration INT DEFAULT 0,
 	             stabilized BOOLEAN DEFAULT 0,
 	             PRIMARY KEY(id))''')
@@ -81,6 +81,8 @@ class PageRankGraph:
 		self.SPEED = self.get_speed()
 		self.OUTPUT_FOLDER = self.get_output_folder()
 		self.OUTPUT_EXTENTION = self.get_output_extention()
+
+		self.iteration = self.get_iteration()
 
 	def close(self):
 		self.database.commit()
@@ -256,6 +258,7 @@ class PageRankGraph:
 
 	def save_graph(self):
 		print("Saving the graph...")
+		self.set_iteration(self.iteration)
 
 		for i in range(self.N):
 			self.update_node(self.nodes[i], self.P[i][0], self.P[i][1], self.W[i][0])
@@ -278,21 +281,23 @@ class PageRankGraph:
 			self.load_graph()
 
 		print("Stabilization in progress...")
-		
-		for i in range(self.iteration, self.iteration+self.MAX_ITERATIONS):
+		print('0/' + str(self.MAX_ITERATIONS))
+
+		for i in range(self.MAX_ITERATIONS):
 			if(plot):
 				self.plot(str(i) + self.OUTPUT_EXTENTION)
 
 			self.W, self.P, size_stabilized, move_stabilized = self.step(error_size, error_move, pageRank=pageRank, move=move, repulsion=repulsion)
+			self.iteration+=1
+			print('\033[F' + str(i+1) + '/' + str(self.MAX_ITERATIONS))
 
 			if(size_stabilized and move_stabilized):
 				break
-		self.iteration+=i
 
 		self.save_graph()
 		self.set_stabilized(True)
 
-		return self.M, self.W, self.P, self.iteration+1
+		return self.M, self.W, self.P, self.iteration
 
 	def step(self, error_size, error_move, pageRank=True, move=True, repulsion=True):
 			if pageRank:
