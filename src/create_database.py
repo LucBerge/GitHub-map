@@ -15,7 +15,7 @@ class PageRank(MRJob):
 	# CONSTANTS
 
 	QUERY_LIMIT = 100000
-	DATABASE_NAME = '/media/lucas/DATA/Lucas/Etudes/ESISAR 2017-2020/Semestre 4 (Norway)/DAT500 - Data intensive systems/Project/src/GitHubMap.db'
+	DATABASE_NAME = '/home/ubuntu/GitHub-map/src/GitHubMap.db'
 
 	# VARIABLES
 
@@ -70,11 +70,13 @@ class PageRank(MRJob):
 							OFFSET """ + str(offset)
 						
 				results = self.kaggle.query(query)
-				quieried = 0
+				print(str(self.QUERY_LIMIT) + "commits have been queried")
+				saved = 0
+				
 
 				for row in results:
 
-					quieried+=1
+					saved+=1
 					email = row['committer']['email']
 					name = row['committer']['name']
 
@@ -86,9 +88,10 @@ class PageRank(MRJob):
 
 						yield {'key' : repo_name}, None
 
-				offset += quieried
-				print(str(offset) + " commits have been queried.")
-		
+				offset += saved
+				print(str(saved) + " commits have been saved.")
+				print("Total : " + str(offset) + "commits saved")
+
 		except Forbidden:
 			print("Maximum quota reached. Do not forget to update the offset variable to " + str(offset))
 
