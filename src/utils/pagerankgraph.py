@@ -330,8 +330,6 @@ class PageRankGraph:
 				if(i != j):
 					target = self.W[i][0] + self.W[j][0] + min(self.W[i][0], self.W[j][0])
 					distance = self.get_distance(self.P[i][0], self.P[i][1], self.P[j][0], self.P[j][1])
-					
-					### OTHER ###
 
 					# Spring
 
@@ -353,23 +351,8 @@ class PageRankGraph:
 					V[i] += (self.P[j]-self.P[i])*total_amplitude
 					n+=1
 
-					### ORIGINAL ###
-
-					# ratio = (distance - target)/max(target, distance)
-
-					# if(target > distance) and repulsion:
-					# 	V[i] += (self.P[j]-self.P[i])*ratio*5
-					# 	n+=1
-						
-					# elif(self.M[i][j] != self.not_linked_value):
-					# 	V[i] += (self.P[j]-self.P[i])*ratio
-					# 	n+=1
-
 			if n:
 				V[i] = V[i]*self.SPEED/n
-				if(True):
-					print("total=" + str(V[i]))
-
 
 		Pn = numpy.add(self.P, V)
 		stabilized = self.is_move_stabilized(self.P, Pn, error_move)
