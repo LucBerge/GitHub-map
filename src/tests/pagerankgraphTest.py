@@ -49,6 +49,6 @@ def createRandomGraph(G):
 
 G = PageRankGraph('example.db')
 createRandomGraph(G)
-G.stabilize(1/100, 1/1000, plot=True)
+G.stabilize(1/100, 1/1000, plot=False)
 G.close()
 G.plot()
