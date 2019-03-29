@@ -59,7 +59,7 @@ class PageRank(MRJob):
 	def query_kaggle(self, key, value):
 
 		nb_rows = self.QUERY_LIMIT
-		offset = 400000
+		offset = 500000
 
 		try:
 			while(offset%self.QUERY_LIMIT == 0):
@@ -70,7 +70,7 @@ class PageRank(MRJob):
 							OFFSET """ + str(offset)
 						
 				results = self.kaggle.query(query)
-				print(str(self.QUERY_LIMIT) + "commits have been queried")
+				print(str(self.QUERY_LIMIT) + " commits have been queried")
 				saved = 0
 				
 
@@ -90,7 +90,7 @@ class PageRank(MRJob):
 
 				offset += saved
 				print(str(saved) + " commits have been saved.")
-				print("Total : " + str(offset) + "commits saved")
+				print("Total : " + str(offset) + " commits saved")
 
 		except Forbidden:
 			print("Maximum quota reached. Do not forget to update the offset variable to " + str(offset))
