@@ -58,9 +58,9 @@ class PageRank(MRJob):
 	def query_kaggle(self, key, value):
 
 		nb_rows = self.QUERY_LIMIT
-		offset = 300000
+		offset = 400000
 
-		while(offset%self.QUERY_LIMIT == 0):
+		while(True):#offset%self.QUERY_LIMIT == 0):
 			query = """
 					SELECT repo_name, committer 
 					FROM `bigquery-public-data.github_repos.commits`
@@ -73,13 +73,13 @@ class PageRank(MRJob):
 			for row in results:
 
 				quieried+=1
-				email = row['committer']['email'].encode('utf8')
-				name = row['committer']['name'].encode('utf8')
+				email = row['committer']['email']
+				name = row['committer']['name']
 
-				yield {'key' : email, 'name' : name}
+				yield {'key' : email, 'name' : name}, None
 
 				for repo_name in row['repo_name']:
-					repo_name = repo_name.encode('utf8')
+					repo_name = repo_name
 					self.db.insert_link(repo_name, email)
 
 					yield {'key' : repo_name}, None
@@ -107,7 +107,7 @@ class PageRank(MRJob):
 		else:
 			try:
 				rs = RepoScrapper(key['key'])
-				rs.scrap(True)
+				#rs.scrap(True)
 				key['commits'] = rs.getCommits()
 				key['branches'] = rs.getBranches()
 				key['releases'] = rs.getReleases()
@@ -126,7 +126,7 @@ class PageRank(MRJob):
 		self.open_database()
 
 	def save(self, key, value):
-		if '@' in key['key']:
+		if '@' in (key['key']):
 			self.db.insert_user(key['key'], key['name'], None)
 		else:
 			self.db.insert_repo(key['key'], key['commits'], key['branches'], key['releases'], key['contributors'], key['issues'], key['pull_requests'], key['watchs'], key['stars'], key['forks'], None)
