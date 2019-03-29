@@ -30,7 +30,7 @@ def createRingGraph(G):
 	G.add_biderectional_link('O','A')
 
 def createRandomGraph(G):
-	NB_CONNECTIONS = 1000
+	NB_CONNECTIONS = 100
 	MAX_COMMITS = 100
 	REPOS = []
 	USERS = []
@@ -49,6 +49,6 @@ def createRandomGraph(G):
 
 G = PageRankGraph('example.db')
 createRandomGraph(G)
-G.stabilize(1/100, 1/1000, plot=False)
+G.stabilize(1/100, 1/1000, plot=True)
 G.close()
 G.plot()

@@ -328,7 +328,7 @@ class PageRankGraph:
 
 	def step_move(self, error_move, repulsion):
 
-		V = numpy.zeros((self.N, 2))
+		V = Va = Vr = numpy.zeros((self.N, 2))
 		for i in range(self.N):
 
 			Va = Vr = numpy.zeros((self.N, 2))
@@ -346,15 +346,16 @@ class PageRankGraph:
 					if(target < x and self.are_linked(i, j)):	# If attraction
 						Va[i] += self.get_unit_vector(self.P[i], self.P[j])*self.getForce(r, R, x)
 						number_of_attractions+=1
-					elif x < target and self.W[i] < self.W[j]: # If repulsion
+					elif x < target: # and self.W[i] <= self.W[j]: # If repulsion
 						Vr[i] -= self.get_unit_vector(self.P[i], self.P[j])*self.getForce(r, R, x)
 						number_of_repulsions += 1
+
+			if number_of_repulsions != 0:
+				V[i] +=  Vr[i]/number_of_repulsions*self.SPEED
 
 			if number_of_attractions != 0 :
 				V[i] += Va[i]/number_of_attractions*self.SPEED
 
-			if number_of_repulsions != 0:
-				V[i] +=  Vr[i]/number_of_repulsions*self.SPEED
 
 		Pn = numpy.add(self.P, V)
 		stabilized = self.is_move_stabilized(self.P, Pn, error_move)
@@ -364,7 +365,7 @@ class PageRankGraph:
 		if x <= R or R+4*r <= x:
 			return r
 		else:
-			#return -math.sqrt((2*r)**2 - (2*r+R-x)**2)/2 + r # Hyperbolic function
+			# return -math.sqrt((2*r)**2 - (2*r+R-x)**2)/2 + r # Hyperbolic function
 			return abs(x/2 - (r+ R/2))	#Linear function
 
 	def get_unit_vector(self, P1, P2):
