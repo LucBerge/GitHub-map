@@ -7,9 +7,11 @@ The GitHub-map project have for objective to create the GitHub community map. In
 ## Overview
 
 - Here is an example of what the algorithm can do. A and B are two repositories whith 50 contributors each. Each user contribute with 1 commit :
+
 ![Animated gif](https://media.giphy.com/media/2t9pvY70cVtzctUOGe/giphy.gif)
 
 - 26 repositories with 500 users and 100 links. The number of commits is randomly choose:
+
 ![Animated gif](https://media.giphy.com/media/fxq5ertHwZx8stREGc/giphy.gif)
 
 ## Database
