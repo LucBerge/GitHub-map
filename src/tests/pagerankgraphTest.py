@@ -3,6 +3,7 @@
 import sys
 sys.path.append("../")
 from utils.pagerankgraph import *
+from string import ascii_uppercase
 
 def createStarsGraph(G):
 	for i in range(0,50):
@@ -47,8 +48,7 @@ def createRandomGraph(G):
 		G.add_biderectional_link(user,repo, w=commits)
 
 G = PageRankGraph('example.db')
-createRingGraph(G)
-#G.stabilize(1/100, 1/1000, move=False, plot=True)
-G.stabilize(1/100, 1/1000, pageRank=False, plot=True)
-G.plot()
+createRandomGraph(G)
+G.stabilize(1/100, 1/1000, plot=True)
 G.close()
+G.plot()

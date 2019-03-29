@@ -8,10 +8,10 @@ class PageRankGraph:
 
 	# CONSTANTS
 
-	MAX_ITERATIONS = 300
+	MAX_ITERATIONS = 500
 
 	EPSILON = 0.1
-	SPEED = 0.5
+	SPEED = 1
 
 	OUTPUT_FOLDER = 'plot/'
 	OUTPUT_EXTENTION = '.png'
@@ -325,50 +325,51 @@ class PageRankGraph:
 
 		V = numpy.zeros((self.N, 2))
 		for i in range(self.N):
+
+			Va = Vr = numpy.zeros((self.N, 2))
+			number_of_attractions = 0
+			number_of_repulsions = 0
+
 			n = 0
 			for j in range(self.N):
 				if(i != j):
-					target = self.W[i][0] + self.W[j][0] + min(self.W[i][0], self.W[j][0])
-					distance = self.get_distance(self.P[i][0], self.P[i][1], self.P[j][0], self.P[j][1])
+					R = max(self.W[i][0], self.W[j][0])
+					r = min(self.W[i][0], self.W[j][0])
+					target = R + 2*r
+					x = self.get_distance(self.P[i], self.P[j])
 
-					# Spring
+					if(target < x and self.are_linked(i, j)):	# If attraction
+						Va[i] += self.get_unit_vector(self.P[i], self.P[j])*self.getForce(r, R, x)
+						number_of_attractions+=1
+					elif x < target: # If repulsion
+						Vr[i] -= self.get_unit_vector(self.P[i], self.P[j])*self.getForce(r, R, x)
+						number_of_repulsions += 1
 
-					if(self.M[i][j] != self.not_linked_value):
-						spring_amplitude = abs(distance - target)
-					else:
-						spring_amplitude = 0
+			if number_of_attractions != 0 :
+				V[i] += Va[i]/number_of_attractions*self.SPEED
 
-					# Vertex Vertex
-					if target > distance:
-						repulsion_amplitude = -1/distance
-					else:
-						repulsion_amplitude = -1/(distance**2)
-
-					# Total
-					total_amplitude = spring_amplitude + repulsion_amplitude
-
-
-					V[i] += (self.P[j]-self.P[i])*total_amplitude
-					n+=1
-
-			if n:
-				V[i] = V[i]*self.SPEED/n
+			if number_of_repulsions != 0:
+				V[i] +=  Vr[i]/number_of_repulsions*self.SPEED
 
 		Pn = numpy.add(self.P, V)
 		stabilized = self.is_move_stabilized(self.P, Pn, error_move)
 		return Pn, stabilized
 
-	def get_distance(self, x1, y1, x2, y2):
-		res = math.sqrt((x1-x2)**2 + (y1-y2)**2)
-		return res
-
-	def sat(self, value, min, max):
-		if value < min:
-			return min
-		elif value > max:
-			return max
+	def getForce(self, r, R, x):
+		if x <= R or R+4*r <= x:
+			return r
 		else:
-			return value
+			#return -math.sqrt((2*r)**2 - (2*r+R-x)**2)/2 + r # Hyperbolic function
+			return abs(x/2 - (r+ R/2))	#Linear function
+
+	def get_unit_vector(self, P1, P2):
+		return (P2-P1)/self.get_distance(P1, P2)
+
+	def get_distance(self, P1, P2):
+		return math.sqrt((P1[0]-P2[0])**2 + (P1[1]-P2[1])**2)
+
+	def are_linked(self, i, j):
+		return self.M[i][j] != self.not_linked_value
 
 	def is_move_stabilized(self, P, Pn, error):
 		return False not in (numpy.absolute(numpy.subtract(P, Pn)) < error)
