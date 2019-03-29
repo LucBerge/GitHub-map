@@ -5,6 +5,7 @@ import sys
 from mrjob.job import *
 from google.cloud import bigquery
 from google.auth.exceptions import DefaultCredentialsError
+from google.api_core.exceptions import Forbidden
 
 from utils.githubdatabase import *
 from utils.githubscrapper import *
@@ -60,33 +61,36 @@ class PageRank(MRJob):
 		nb_rows = self.QUERY_LIMIT
 		offset = 400000
 
-		while(True):#offset%self.QUERY_LIMIT == 0):
-			query = """
-					SELECT repo_name, committer 
-					FROM `bigquery-public-data.github_repos.commits`
-					LIMIT """ + str(self.QUERY_LIMIT) + """
-					OFFSET """ + str(offset)
-				
-			results = self.kaggle.query(query)
-			quieried = 0
+		try:
+			while(offset%self.QUERY_LIMIT == 0):
+				query = """
+							SELECT repo_name, committer 
+							FROM `bigquery-public-data.github_repos.commits`
+							LIMIT """ + str(self.QUERY_LIMIT) + """
+							OFFSET """ + str(offset)
+						
+				results = self.kaggle.query(query)
+				quieried = 0
 
-			for row in results:
+				for row in results:
 
-				quieried+=1
-				email = row['committer']['email']
-				name = row['committer']['name']
+					quieried+=1
+					email = row['committer']['email']
+					name = row['committer']['name']
 
-				yield {'key' : email, 'name' : name}, None
+					yield {'key' : email, 'name' : name}, None
 
-				for repo_name in row['repo_name']:
-					repo_name = repo_name
-					self.db.insert_link(repo_name, email)
+					for repo_name in row['repo_name']:
+						repo_name = repo_name
+						self.db.insert_link(repo_name, email)
 
-					yield {'key' : repo_name}, None
+						yield {'key' : repo_name}, None
 
-			offset += quieried
-			print(str(offset) + " commits have been queried.")
-			break
+				offset += quieried
+				print(str(offset) + " commits have been queried.")
+		
+		except Forbidden:
+			print("Maximum quota reached. Do not forget to update the offset variable to " + str(offset))
 
 	def query_kaggle_final(self):
 		self.disconnect_to_kaggle()
