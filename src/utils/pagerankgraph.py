@@ -341,7 +341,7 @@ class PageRankGraph:
 					if(target < x and self.are_linked(i, j)):	# If attraction
 						Va[i] += self.get_unit_vector(self.P[i], self.P[j])*self.getForce(r, R, x)
 						number_of_attractions+=1
-					elif x < target: # If repulsion
+					elif x < target and self.W[i] < self.W[j]: # If repulsion
 						Vr[i] -= self.get_unit_vector(self.P[i], self.P[j])*self.getForce(r, R, x)
 						number_of_repulsions += 1
 
