@@ -10,7 +10,7 @@ class PageRank(MRJob):
 	# CONSTANTS
 
 	EPSILON = 0.15
-	MAX_STEP = 20
+	MAX_STEP = 2000
 	DATABASE_NAME = '/media/lucas/DATA/Lucas/Etudes/ESISAR 2017-2020/Semestre 4 (Norway)/DAT500 - Data intensive systems/Project/src/test.db'
 
 	# VARIABLES
@@ -18,7 +18,7 @@ class PageRank(MRJob):
 	db = None
 
 	def steps(self):
-		steps = [MRStep(mapper_init=self.open_database, mapper=self.get_weight, mapper_final=self.close_database)]
+		steps = [MRStep(mapper_init=self.open_database, mapper=self.set_weight, mapper_final=self.close_database)]
 
 		for i in range(self.MAX_STEP):
 			steps.append(MRStep(mapper_init=self.mapper_pagerank_init,
@@ -36,7 +36,12 @@ class PageRank(MRJob):
 	def close_database(self):
 		self.db.close()
 
-	def get_weight(self, key, value):
+	#########
+	# STEPS #
+	#########
+
+	# STEP 1 = Set the default weigth for every nodes
+	def set_weight(self, key, value):
 
 		repos = [repo[0] for repo in self.db.get_repos()] #Get all repo names
 		users = [user[0] for user in self.db.get_users()] #Get all user emails
@@ -49,6 +54,7 @@ class PageRank(MRJob):
 		for user in users:
 			yield get_node_as_dictionnary(user, 'user'), initial_weight,
 
+	#STEP 2 = Page rank
 	def mapper_pagerank_init(self):
 		self.open_database()
 		self.repos = [repo[0] for repo in self.db.get_repos()] #Get all repo names
@@ -102,11 +108,16 @@ class PageRank(MRJob):
 	def reducer_pagerank(self, node, weights):
 		yield node, sum(weights)
 
+	# STEP 3 = Save
 	def save_weight(self, node, weight):
 		if node['type'] == "user":
 			self.db.update_user_weight(node['name'], weight)
 		else:
 			self.db.update_repo_weight(node['name'], weight)
+
+########
+# MAIN #
+########
 
 def get_node_as_dictionnary(name, type):
 	return {'name' : name, 'type' : type}

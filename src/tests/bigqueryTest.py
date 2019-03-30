@@ -2,33 +2,31 @@
 
 import os, traceback
 from google.cloud import bigquery
+from google.auth.exceptions import DefaultCredentialsError
 
-MAX_QUERY_SIZE = 100 #Go
-GOOGLE_KEY = "../../ali-kaggle-service.json"
-out = os.popen('echo $GOOGLE_APPLICATION_CREDENTIALS').read()
-assert (GOOGLE_KEY in out), 'Please type [export GOOGLE_APPLICATION_CREDENTIALS=' + GOOGLE_KEY + '] in the console.'
-
-def getRepos():
+def main():
 	service = bigquery.Client()
 
 	QUERY = """
-	SELECT repo_name
-	FROM `bigquery-public-data.github_repos.commits`
+	SELECT C.committer.email, C.committer.name, R.repo_name
+	FROM `bigquery-public-data.github_repos.commits` C, `bigquery-public-data.github_repos.sample_repos` R
+	WHERE R.repo_name IN UNNEST(C.repo_name)
 	LIMIT 10
+	OFFSET 0
 	"""
 
 	results = service.query(QUERY)
 
 	for row in results:
-		print(row[0])
-
-def main():
-	getRepos()
+		print(row)
 
 if __name__ == "__main__":
 	try:
 		main()
+	except DefaultCredentialsError:
+		print('You first have to set GOOGLE_APPLICATION_CREDENTIALS environnement variable.')
+		print('Open a console and type "export GOOGLE_APPLICATION_CREDENTIALS=path/to/google/credentials.json".')
 	except KeyboardInterrupt:
-		None
+		pass
 	except:
 		traceback.print_exc()
