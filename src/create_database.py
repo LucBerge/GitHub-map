@@ -10,12 +10,16 @@ from google.api_core.exceptions import Forbidden
 from utils.githubdatabase import *
 from utils.githubscrapper import *
 
+
 class PageRank(MRJob):
 
 	# CONSTANTS
 
-	QUERY_LIMIT = 100000
-	DATABASE_NAME = '/home/ubuntu/GitHub-map/src/GitHubMap.db'
+	QUERY_LIMIT = 500000
+	OFFSET = 0
+	CURRENT_FOLDER = '/media/lucas/DATA/Lucas/Etudes/ESISAR 2017-2020/Semestre 4 (Norway)/DAT500 - Data intensive systems/Project/src/'
+	DATABASE_NAME = 'test.db'
+	LOG_NAME = 'logs.txt'
 
 	# VARIABLES
 
@@ -24,15 +28,15 @@ class PageRank(MRJob):
 
 	def steps(self):
 		return [
-			MRStep(mapper_init=self.query_kaggle_init,
-					mapper=self.query_kaggle,
-					mapper_final=self.query_kaggle_final,
-					combiner=self.query_kaggle_combiner,
-					reducer=self.query_kaggle_reducer),
+			MRStep(mapper_init=self.connect_to_kaggle,
+					mapper=self.get_kaggle_mapper,
+					mapper_final=self.disconnect_to_kaggle,
+					combiner=self.get_kaggle_combiner,
+					reducer=self.get_kaggle_reducer),
 			MRStep(mapper=self.scrapping),
-			MRStep(mapper_init=self.save_init,
+			MRStep(mapper_init=self.connect_to_database,
 					mapper=self.save,
-					mapper_final=self.save_final)
+					mapper_final=self.disconnect_to_database)
 		]
 
 	def connect_to_kaggle(self):
@@ -41,79 +45,71 @@ class PageRank(MRJob):
 	def disconnect_to_kaggle(self):
 		pass	#Do nothing
 
-	def open_database(self):
-		self.db = GitHubDatabase(self.DATABASE_NAME)
+	def connect_to_database(self):
+		self.db = GitHubDatabase(self.CURRENT_FOLDER + self.DATABASE_NAME)
 
-	def close_database(self):
+	def disconnect_to_database(self):
 		self.db.close()
+
+	def connect_to_kaggle_and_database(self):
+		self.connect_to_kaggle()
+		self.connect_to_database()
+
+	def disconnect_to_kaggle_and_database(self):
+		self.disconnect_to_kaggle()
+		self.disconnect_to_database()
 
 	#########
 	# STEPS #
 	#########
 
-	#STEP 1
-	def query_kaggle_init(self):
-		self.connect_to_kaggle()
-		self.open_database()
-
-	def query_kaggle(self, key, value):
-
-		nb_rows = self.QUERY_LIMIT
-		offset = 500000
+	#STEP 1 = Get sample repos
+	def get_kaggle_mapper(self, key, value):
 
 		try:
-			while(offset%self.QUERY_LIMIT == 0):
+			while(self.OFFSET%self.QUERY_LIMIT == 0):
+
 				query = """
-							SELECT repo_name, committer 
-							FROM `bigquery-public-data.github_repos.commits`
-							LIMIT """ + str(self.QUERY_LIMIT) + """
-							OFFSET """ + str(offset)
-						
-				results = self.kaggle.query(query)
-				print(str(self.QUERY_LIMIT) + " commits have been queried")
-				saved = 0
+					SELECT C.committer.email, C.committer.name, R.repo_name
+					FROM `bigquery-public-data.github_repos.commits` C, `bigquery-public-data.github_repos.sample_repos` R
+					WHERE R.repo_name IN UNNEST(C.repo_name)
+					LIMIT """ + str(self.QUERY_LIMIT) + """
+					OFFSET """ + str(self.OFFSET)
 				
+				rows = self.kaggle.query(query)
 
-				for row in results:
+				for row in rows:
+					yield {'repo_name' : row['repo_name']}, 1
 
-					saved+=1
-					email = row['committer']['email']
-					name = row['committer']['name']
+					email = row['email']
+					name = row['name']
+					if '@' in email and name:
+						yield {'email' : email, 'name' : name}, 1
+						yield {'repo_name' : row['repo_name'], 'email' : email}, 1
 
-					yield {'key' : email, 'name' : name}, None
-
-					for repo_name in row['repo_name']:
-						repo_name = repo_name
-						self.db.insert_link(repo_name, email)
-
-						yield {'key' : repo_name}, None
-
-				offset += saved
-				print(str(saved) + " commits have been saved.")
-				print("Total : " + str(offset) + " commits saved")
+				self.OFFSET+=self.QUERY_LIMIT
+				log(str(self.OFFSET) + " commits have been saved.")
 
 		except Forbidden:
-			print("Maximum quota reached. Do not forget to update the offset variable to " + str(offset))
+			log("Maximum quota reached. Do not forget to update the offset variable to " + str(self.OFFSET))
 
-	def query_kaggle_final(self):
-		self.disconnect_to_kaggle()
-		self.close_database()
+	def get_kaggle_combiner(self, key, values):
+		yield key, sum(values)
 
-	def query_kaggle_combiner(self, key, values):
-		yield key, None
+	def get_kaggle_reducer(self, key, values):
+		yield key, sum(values)
 
-	def query_kaggle_reducer(self, key, values):
-		yield key, None
-
-	#STEP 2
+	#STEP 2 = Scrap the repos and users (Optional)
 	def scrapping(self, key, value):
-		if '@' in key['key']:
-			#us = UserScrapper(key)
+		if 'repo_name' in key and 'email' in key:
+			yield key, value
+		elif 'email' in key:
+			#us = UserScrapper(key['email'])
 			#us.scrap()
 			yield key, value
-		else:
+		elif 'repo_name' in key:
 			try:
-				rs = RepoScrapper(key['key'])
+				rs = RepoScrapper(key['repo_name'])
 				#rs.scrap(True)
 				key['commits'] = rs.getCommits()
 				key['branches'] = rs.getBranches()
@@ -126,20 +122,26 @@ class PageRank(MRJob):
 				key['forks'] = rs.getForks()
 				yield key, value
 			except CannotScrapRepoException as e:
-				print(str(e))
+				log(str(e))
 
-	#STEP 39
-	def save_init(self):
-		self.open_database()
-
+	#STEP 3 = Save repos and users
 	def save(self, key, value):
-		if '@' in (key['key']):
-			self.db.insert_user(key['key'], key['name'], None)
-		else:
-			self.db.insert_repo(key['key'], key['commits'], key['branches'], key['releases'], key['contributors'], key['issues'], key['pull_requests'], key['watchs'], key['stars'], key['forks'], None)
+		if 'repo_name' in key and 'email' in key:
+			self.db.insert_link(key['repo_name'], key['email'], value)
+		elif 'email' in key:
+			self.db.insert_user(key['email'], key['name'], None)
+		elif 'repo_name' in key:
+			self.db.insert_repo(key['repo_name'], key['commits'], key['branches'], key['releases'], key['contributors'], key['issues'], key['pull_requests'], key['watchs'], key['stars'], key['forks'], None)
 
-	def save_final(self):
-		self.close_database()
+########
+# MAIN #
+########
+
+def log(message):
+	print(message)
+	file = open(PageRank.CURRENT_FOLDER + PageRank.LOG_NAME, "a")
+	file.write(message + '\n')
+	file.close()
 
 if __name__ == '__main__':
 	try:
@@ -151,3 +153,6 @@ if __name__ == '__main__':
 
 	except KeyboardInterrupt:
 		pass
+
+	except:
+		log(traceback.print_stack())
