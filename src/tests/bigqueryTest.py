@@ -15,6 +15,12 @@ def main():
 	OFFSET 0
 	"""
 
+	QUERY = """
+	SELECT committer.email, committer.name, repo_name
+	FROM `bigquery-public-data.github_repos.commits`
+	WHERE RAND() < 1000000/(SELECT COUNT(*) FROM `bigquery-public-data.github_repos.commits`)
+	"""
+
 	results = service.query(QUERY)
 
 	for row in results:
@@ -23,9 +29,9 @@ def main():
 if __name__ == "__main__":
 	try:
 		main()
-	except DefaultCredentialsError:
-		print('You first have to set GOOGLE_APPLICATION_CREDENTIALS environnement variable.')
-		print('Open a console and type "export GOOGLE_APPLICATION_CREDENTIALS=path/to/google/credentials.json".')
+	# except DefaultCredentialsError:
+	# 	print('You first have to set GOOGLE_APPLICATION_CREDENTIALS environnement variable.')
+	# 	print('Open a console and type "export GOOGLE_APPLICATION_CREDENTIALS=path/to/google/credentials.json".')
 	except KeyboardInterrupt:
 		pass
 	except:

@@ -15,7 +15,7 @@ class PageRank(MRJob):
 
 	# CONSTANTS
 
-	QUERY_LIMIT = 500000
+	QUERY_LIMIT = 200000
 	OFFSET = 0
 	CURRENT_FOLDER = '/media/lucas/DATA/Lucas/Etudes/ESISAR 2017-2020/Semestre 4 (Norway)/DAT500 - Data intensive systems/Project/src/'
 	DATABASE_NAME = 'test.db'
@@ -67,28 +67,27 @@ class PageRank(MRJob):
 	def get_kaggle_mapper(self, key, value):
 
 		try:
-			while(self.OFFSET%self.QUERY_LIMIT == 0):
-
-				query = """
-					SELECT C.committer.email, C.committer.name, R.repo_name
-					FROM `bigquery-public-data.github_repos.commits` C, `bigquery-public-data.github_repos.sample_repos` R
-					WHERE R.repo_name IN UNNEST(C.repo_name)
-					LIMIT """ + str(self.QUERY_LIMIT) + """
-					OFFSET """ + str(self.OFFSET)
+			query = """
+				SELECT committer.email, committer.name, repo_name
+				FROM `bigquery-public-data.github_repos.commits`
+				WHERE RAND() < """ + str(self.QUERY_LIMIT) + """/(SELECT COUNT(*) FROM `bigquery-public-data.github_repos.commits`)
+				"""
 				
-				rows = self.kaggle.query(query)
+			rows = self.kaggle.query(query)
+			log(str(self.QUERY_LIMIT) + " commits have been queried.")
 
-				for row in rows:
-					yield {'repo_name' : row['repo_name']}, 1
+			for row in rows:
+				email = row['email']
+				name = row['name']
 
-					email = row['email']
-					name = row['name']
-					if '@' in email and name:
-						yield {'email' : email, 'name' : name}, 1
-						yield {'repo_name' : row['repo_name'], 'email' : email}, 1
+				if '@' in email and name:
+					yield {'email' : email, 'name' : name}, 1
 
-				self.OFFSET+=self.QUERY_LIMIT
-				log(str(self.OFFSET) + " commits have been saved.")
+					for repo in row['repo_name']:
+						yield {'repo_name' : repo}, 1
+						yield {'repo_name' : repo, 'email' : email}, 1
+
+			log(str(self.QUERY_LIMIT) + " commits have been saved.")
 
 		except Forbidden:
 			log("Maximum quota reached. Do not forget to update the offset variable to " + str(self.OFFSET))
