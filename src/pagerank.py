@@ -21,6 +21,7 @@ class PageRank(MRJob):
 		self.add_passthrough_option(
 			'--database', dest='database', type='str',
 			help='The database to use')
+		
 		self.add_passthrough_option(
 			'--iterations', dest='iterations', default=10, type='int',
 			help='The number of iterations')
@@ -29,7 +30,7 @@ class PageRank(MRJob):
 			help='Pourcentage of weigth the node keep for himself')
 
 	def steps(self):
-		steps = [MRStep(mapper_init=self.open_database, mapper=self.set_weight, mapper_final=self.close_database)]
+		steps = [MRStep(mapper_init=self.open_database, mapper=self.get_links_mapper, reducer=self.get_links_reducer, mapper_final=self.close_database)]
 
 		for i in range(self.options.iterations):
 			steps.append(MRStep(mapper=self.mapper_pagerank,
@@ -50,37 +51,33 @@ class PageRank(MRJob):
 	#########
 
 	# STEP 1 = Set the default weigth for every nodes
-	def set_weight(self, key, value):
+	def get_links_mapper(self, key, value):
+		repos = self.db.get_repos() #Get all repos
+		users = self.db.get_users() #Get all repos
+		links = self.db.get_links() #Get all links
+		N = len(repos) + len(users)
 
-		repos = [repo[0] for repo in self.db.get_repos()] #Get all repo names
-		users = [user[0] for user in self.db.get_users()] #Get all user emails
+		for repo_name, email, commits in links:
+			yield {'key' : repo_name}, (email, commits, N)
+			yield {'key' : email}, (repo_name, commits, N)
 
-		initial_weight = 1/(len(repos) + len(users))
+	def get_links_reducer(self, node, values):
+		links = {}
+		tab_values = [value for value in values]
+		total_commits = sum([value[1] for value in tab_values])
 
-		for repo in repos:
+		for value in tab_values:
+			links[value[0]] = value[1]/total_commits
 
-			links = {}
-			neighbour_users = self.db.get_neighbour_users(repo)
-			total_commits = sum([commits for user, commits in neighbour_users])
-			for user, commit in neighbour_users:
-				links[user] = commit/total_commits
-			yield {'key':repo, 'links':links}, initial_weight
-
-		for user in users:
-
-			links = {}
-			neighbour_repos = self.db.get_neighbour_repos(user)
-			total_commits = sum([commits for repo, commits in neighbour_repos])
-			for repo, commit in neighbour_repos:
-				links[repo] = commit/total_commits
-			yield {'key':user, 'links':links}, initial_weight
+		node['links'] = links
+		yield node, 1/tab_values[0][2]
 
 	#STEP 2 = Page rank
 	def mapper_pagerank(self, node, weight):
 		yield {'key' : node['key']}, node['links']												#Give links to himself
 		yield {'key' : node['key']}, weight*self.options.damping_factor							#Keep a part of his weight
-
-		neighbours = node['links'] 																#Get neighbours
+		neighbours = node['links'] 		
+																								#Get neighbours
 		for neighbour in neighbours.keys():														#For every neighbour
 			yield {'key' : neighbour}, weight*neighbours[neighbour]*(1-self.options.damping_factor)	#Give a part of his weight
 
@@ -122,7 +119,6 @@ if __name__ == '__main__':
 			if('--database=' in arg):
 				valid = True
 				sys.argv.append('--current-folder=' + os.getcwd() + '/')
-				print(sys.argv)
 				PageRank.run()
 
 		if(not valid):
