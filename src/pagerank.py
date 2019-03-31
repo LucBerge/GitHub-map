@@ -52,10 +52,8 @@ class PageRank(MRJob):
 
 	# STEP 1 = Set the default weigth for every nodes
 	def get_links_mapper(self, key, value):
-		repos = self.db.get_repos() #Get all repos
-		users = self.db.get_users() #Get all repos
 		links = self.db.get_links() #Get all links
-		N = len(repos) + len(users)
+		N = self.db.len_repos() + self.db.len_users()
 
 		for repo_name, email, commits in links:
 			yield {'key' : repo_name}, (email, commits, N)
