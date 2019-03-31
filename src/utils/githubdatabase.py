@@ -55,6 +55,7 @@ class GitHubDatabase:
 	# REPOS TABLE #
 	###############
 
+	# DAO
 	def find_repo(self, repo_name):
 		self.cursor.execute('''SELECT * FROM repos WHERE repo_name=?''', (repo_name,))
 		result = self.cursor.fetchall()
@@ -72,14 +73,24 @@ class GitHubDatabase:
 	def remove_repo(self, repo_name):
 		self.cursor.execute('''DELETE FROM repos WHERE repo_name=?''', (repo_name,))
 
+	# OTHER
+	def len_repos(self):
+		self.cursor.execute('''SELECT COUNT(*) FROM repos''')
+		return self.cursor.fetchall()[0][0]
+
 	def get_repos(self):
 		self.cursor.execute('''SELECT * FROM repos''')
+		return self.cursor.fetchall()
+
+	def top_repos(self):
+		self.cursor.execute('''SELECT * FROM repos ORDER BY weight DESC''')
 		return self.cursor.fetchall()
 
 	###############
 	# LINKS TABLE #
 	###############
 
+	# DAO
 	def find_link(self, repo_name, email):
 		self.cursor.execute('''SELECT * FROM links WHERE repo_name=? AND email=?''', (repo_name, email,))
 		result = self.cursor.fetchall()
@@ -97,6 +108,11 @@ class GitHubDatabase:
 
 	def remove_link(self, repo_name, email):
 		self.cursor.execute('''DELETE FROM links WHERE repo_name=? AND email=?''', (repo_name, email,))
+	
+	# OTHER
+	def len_links(self):
+		self.cursor.execute('''SELECT COUNT(*) FROM links''')
+		return self.cursor.fetchall()[0][0]
 
 	def get_links(self):
 		self.cursor.execute('''SELECT * FROM links''')
@@ -106,6 +122,7 @@ class GitHubDatabase:
 	# USERS TABLE #
 	###############
 
+	# DAO
 	def find_user(self, email):
 		self.cursor.execute('''SELECT * FROM users WHERE email=?''', (email,))
 		result = self.cursor.fetchall()
@@ -123,8 +140,17 @@ class GitHubDatabase:
 	def remove_user(self, email):
 		self.cursor.execute('''DELETE FROM users WHERE email=?''', (email,))
 
+	# OTHER
+	def len_users(self):
+		self.cursor.execute('''SELECT COUNT(*) FROM users''')
+		return self.cursor.fetchall()[0][0]
+
 	def get_users(self):
 		self.cursor.execute('''SELECT * FROM users''')
+		return self.cursor.fetchall()
+
+	def top_users(self):
+		self.cursor.execute('''SELECT * FROM users ORDER BY weight DESC''')
 		return self.cursor.fetchall()
 
 	#################
