@@ -84,7 +84,7 @@ class CreateDatabase(MRJob):
 			self.log(str(self.options.query_limit) + " commits have been saved.")
 
 		except Forbidden:
-			self.log("Maximum quota reached. Do not forget to update the offset variable to " + str(self.OFFSET))
+			self.log("Maximum quota reached.")
 
 	def get_kaggle_reducer(self, key, values):
 		yield key, sum(values)
