@@ -164,3 +164,7 @@ class GitHubDatabase:
 	def get_neighbour_users(self, repo_name):
 		self.cursor.execute('''SELECT email, commits FROM links WHERE repo_name=?''',(repo_name,))
 		return self.cursor.fetchall()
+
+	def count_commits(self, repo_name):
+		self.cursor.execute('''SELECT SUM(commits) FROM links''')
+		return self.cursor.fetchall()[0][0]
