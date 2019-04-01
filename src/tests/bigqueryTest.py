@@ -4,7 +4,27 @@ import os, traceback
 from google.cloud import bigquery
 from google.auth.exceptions import DefaultCredentialsError
 
-def main():
+def estimation():
+	LIMIT = 1
+	OFFSET = 0
+	QUERY = """
+			SELECT committer.email, committer.name, repo_name
+			FROM `bigquery-public-data.github_repos.commits`
+			LIMIT """ + str(LIMIT) + """
+			OFFSET """ + str(OFFSET)
+
+	client = bigquery.Client()
+	job_config = bigquery.QueryJobConfig()
+	job_config.dry_run = True
+	job_config.use_query_cache = False
+	query_job = client.query((QUERY), job_config=job_config)
+
+	assert query_job.state == 'DONE'
+	assert query_job.dry_run
+
+	print("This query will process {} bytes.".format(query_job.total_bytes_processed))
+
+def query():
 	service = bigquery.Client()
 
 	QUERY = """
@@ -28,10 +48,7 @@ def main():
 
 if __name__ == "__main__":
 	try:
-		main()
-	# except DefaultCredentialsError:
-	# 	print('You first have to set GOOGLE_APPLICATION_CREDENTIALS environnement variable.')
-	# 	print('Open a console and type "export GOOGLE_APPLICATION_CREDENTIALS=path/to/google/credentials.json".')
+		estimation()
 	except KeyboardInterrupt:
 		pass
 	except:

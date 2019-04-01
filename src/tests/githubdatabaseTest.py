@@ -69,26 +69,48 @@
 # C ----------- 3
 #      >1/4
 
+def createRandomGraph(db):
+	NB_CONNECTIONS = 200000
+	MAX_COMMITS = 10
+	REPOS = []
+	USERS = []
 
-import sys
+	for repo in range(300000):
+		REPOS.append('repo' + str(repo))
+
+	for user in range(100000):
+		USERS.append('user' + str(user))
+
+	for i in range(NB_CONNECTIONS):
+		user = random.choice(USERS)
+		repo = random.choice(REPOS)
+		commits = random.randint(0, MAX_COMMITS)
+		db.insert_repo(user, None, None, None, None, None, None, None, None, None, None)
+		db.insert_user(repo, None, None)
+		db.insert_link(repo, user, commits)
+
+def createABCGraph(db):
+	db.insert_repo("A", None, None, None, None, None, None, None, None, None, None)
+	db.insert_repo("B", None, None, None, None, None, None, None, None, None, None)
+	db.insert_repo("C", None, None, None, None, None, None, None, None, None, None)
+
+	db.insert_user("1",None,None)
+	db.insert_user("2",None,None)
+	db.insert_user("3",None,None)
+
+	db.insert_link("A", "1", 6)
+	db.insert_link("A", "2", 1)
+	db.insert_link("B", "2", 2)
+	db.insert_link("C", "2", 3)
+	db.insert_link("C", "3", 1)
+
+import sys, random
 sys.path.append("../")
 from utils import githubdatabase
 
 db = githubdatabase.GitHubDatabase("test.db")
 
-db.insert_repo("A", None, None, None, None, None, None, None, None, None, None)
-db.insert_repo("B", None, None, None, None, None, None, None, None, None, None)
-db.insert_repo("C", None, None, None, None, None, None, None, None, None, None)
-
-db.insert_user("1",None,None)
-db.insert_user("2",None,None)
-db.insert_user("3",None,None)
-
-db.insert_link("A", "1", 6)
-db.insert_link("A", "2", 1)
-db.insert_link("B", "2", 2)
-db.insert_link("C", "2", 3)
-db.insert_link("C", "3", 1)
+createABCGraph(db)
 
 print("\n=== REPOS ===")
 print(db.get_repos())
