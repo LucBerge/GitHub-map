@@ -16,7 +16,6 @@ class CreateDatabase(MRJob):
 	# VARIABLES
 
 	kaggle = None
-	db = None
 
 	def configure_options(self):
 		super(CreateDatabase, self).configure_options()
@@ -39,19 +38,11 @@ class CreateDatabase(MRJob):
 					mapper=self.get_kaggle_mapper,
 					reducer=self.get_kaggle_reducer),
 			MRStep(mapper=self.scrapping),
-			MRStep(mapper_init=self.connect_to_database,
-					mapper=self.save,
-					mapper_final=self.disconnect_to_database)
+			MRStep(mapper=self.save)
 		]
 
 	def connect_to_kaggle(self):
 		self.kaggle = bigquery.Client()
-
-	def connect_to_database(self):
-		self.db = GitHubDatabase(self.options.current_folder + self.options.database)
-
-	def disconnect_to_database(self):
-		self.db.close()
 
 	#########
 	# STEPS #
@@ -117,12 +108,12 @@ class CreateDatabase(MRJob):
 	#STEP 3 = Save repos and users
 	def save(self, key, value):
 		if 'repo_name' in key and 'email' in key:
-			self.db.insert_link(key['repo_name'], key['email'], value)
+			print(key['repo_name'] + '\t' + key['email'] + '\t' + str(value) + '\n')
 		elif 'email' in key:
-			self.db.insert_user(key['email'], key['name'], None)
+			pass #Do nothing for repos (for the moment)
 		elif 'repo_name' in key:
-			self.db.insert_repo(key['repo_name'], key['commits'], key['branches'], key['releases'], key['contributors'], key['issues'], key['pull_requests'], key['watchs'], key['stars'], key['forks'], None)
-
+			pass #Do nothing for the users (for the moment)
+			
 	#######
 	# LOG #
 	#######
