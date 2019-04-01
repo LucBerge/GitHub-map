@@ -1,1 +1,0 @@
-I want to start my mrjob without entry but, when simply running "python [...].py", MrJob is waiting for STDIN. To bypass this problem, I use this file as entry. This file need to have only one line

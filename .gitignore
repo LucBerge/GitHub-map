@@ -3,4 +3,5 @@ presentations/
 **/*.pem
 **/*.sh
 **/*.pyc
+**/*.db
 GitHubMap__DEPRECATED__.db
