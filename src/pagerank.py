@@ -43,18 +43,17 @@ class PageRank(MRJob):
 	# Get all links
 	def get_commits_mapper(self, key, value):
 
-		values = value.strip().split('\t')	 #Strop and split each line
+		values = value.strip().split('\t')	 #Strip and split each line
 
 		if len(values) == 3:				#If the line have 3 values
-			repo = values[0]					# Get the repo name
-			email = values[1]					# Get the email
+			repo = values[0]					#Get the repo name
+			email = values[1]					#Get the email
 			commits = values[2]					#Get the number of commits
 
 			yield {'key' : repo}, (email, int(commits))		#Yield the repo node as dict
 			yield {'key' : email}, (repo, int(commits))		#Yield the user node as dict
 
 	# Get all nodes with there links
-
 	def get_commits_reducer(self, node, values):	#Calcul the pourcentage for each link
 		links = {}
 		tab_values = [value for value in values]	#Get the values as a regular list
@@ -66,14 +65,14 @@ class PageRank(MRJob):
 		node['links'] = links	#Add the links dict to the key
 		yield None, node 		#Yield all nodes with the None key to be able to acces all nodes from one key
 
-	# STEP 3 = Get the default weight for each node
+	# STEP 2 = Get the default weight for each node
 	def get_weight_reducer(self, _, nodes):	
 		tab_nodes = [node for node in nodes] 	#Get the values as a regular list
 		N = len(tab_nodes)						#Get the number of nodes
 		for node in tab_nodes:					#For each node
 			yield node, 1/N 						#Yield the node as key with the default weight as value
 
-	#STEP 4 to 4+N = Page rank
+	#STEP 3 to 3+N = Page rank
 	def pagerank_mapper(self, node, weight):
 		yield {'key' : node['key']}, node['links']												#Give links to himself
 		yield {'key' : node['key']}, weight*self.options.damping_factor							#Keep a part of his weight
@@ -92,7 +91,7 @@ class PageRank(MRJob):
 
 		yield node, weight				#Set the new weight
 
-	#STEp 5+N = Sort output
+	#STEp 4+N = Sort output
 	def output_mapper(self, node, weight):
 		yield None, (weight, node)			#Yield all nodes with the None key to be able to acces all nodes from one key
 
