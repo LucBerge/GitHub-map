@@ -50,11 +50,12 @@ class PageRank(MRJob):
 			email = values[1]					#Get the email
 			commits = values[2]					#Get the number of commits
 
-			yield {'key' : repo}, (email, int(commits))		#Yield the repo node as dict
-			yield {'key' : email}, (repo, int(commits))		#Yield the user node as dict
+			yield repo, (email, int(commits))		#Yield the repo node as str
+			yield email, (repo, int(commits))		#Yield the user node as str
 
 	# Get all nodes with there links
-	def get_commits_reducer(self, node, values):	#Calcul the pourcentage for each link
+	def get_commits_reducer(self, node_name, values):	#Calcul the pourcentage for each link
+		node = {'key' : node_name}
 		links = {}
 		tab_values = [value for value in values]	#Get the values as a regular list
 		total_commits = sum([value[1] for value in tab_values])	#Get the total number of commits for the node
