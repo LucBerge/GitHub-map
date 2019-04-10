@@ -4,7 +4,7 @@ from __future__ import division
 import os, traceback, sys
 import pyspark, datetime
 
-DAMPING_FACTOR = 0
+DAMPING_FACTOR = 0.85
 
 def log(x):
 	print x
@@ -43,7 +43,7 @@ def main(input, iterations):
 	#OPEN
 	print("Opening file...")
 	sc = pyspark.SparkContext(appName="pagerank")
-	links = sc.textFile("file://" + input, 1)
+	links = sc.textFile("file://" + input)
 
 	#STEP 1 = Get nodes with their links
 	print("STEP 1 - Getting the nodes...")
@@ -69,23 +69,22 @@ def main(input, iterations):
 
 	#STEP 4 = Order by weight
 	print("STEP 4 - Ordering ranks...")
-	orderedRanks = ranks.sortByKey(ascending= False)
+	orderedRanks = ranks.sortBy(lambda node: node[1])
 	time = str(datetime.datetime.now()).replace('.','_').replace(':','-')
 
 	#SAVE
 	print("Saving file...")
-	orderedRanks.saveAsTextFile(time)
+	orderedRanks.coalesce(1).saveAsTextFile(time)
 	sc.stop()
 
 	print("Done !")
-	
+
 ########
 # MAIN #
 ########
 
 if __name__ == '__main__':		#If main function
 	try:							#Try
-		print(sys.argv)
 		if(len(sys.argv) != 3):
 			print("Usage : python <input> <iterations>")
 			sys.exit(-1)
