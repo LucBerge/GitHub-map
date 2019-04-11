@@ -1,4 +1,0 @@
-*.db filter=lfs diff=lfs merge=lfs -text
-data/GitHubMap_200k_20.db filter=lfs diff=lfs merge=lfs -text
-data/GitHubMap_scrapping.db filter=lfs diff=lfs merge=lfs -text
-GitHubMap_2M_0.db filter=lfs diff=lfs merge=lfs -text
