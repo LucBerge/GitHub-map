@@ -18,7 +18,7 @@ QUERY = """
 #https://cloud.google.com/bigquery/docs/reference/standard-sql/arrays
 	
 rows = service.query(QUERY)
-output = open("input.txt","w")
+output = open("links.txt","w")
 counter = 0
 for row in rows:
 	if(counter%10000 == 0):
