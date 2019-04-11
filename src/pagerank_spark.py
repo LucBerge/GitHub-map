@@ -7,7 +7,7 @@ import pyspark, datetime
 DAMPING_FACTOR = 0.85
 
 def log(x):
-	print x
+	print(x)
 
 # STEP 1
 def getNodes(line):
