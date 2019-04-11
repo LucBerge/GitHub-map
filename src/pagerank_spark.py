@@ -94,7 +94,10 @@ if __name__ == '__main__':		#If main function
 			print("<input> have to be a file.")
 			sys.exit(-1)
 
-		input = os.getcwd() + "/" + sys.argv[1]
+		if(sys.argv[1][0] == '/'): 	#If absolute
+			input = sys.argv[1]
+		else:						#If relative
+			input = os.getcwd() + "/" + sys.argv[1]
 
 		try:
 			iterations = int(sys.argv[2])
