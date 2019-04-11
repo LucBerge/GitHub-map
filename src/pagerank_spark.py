@@ -38,7 +38,7 @@ def setWeight(node):
 	for neighbour in node[1][0].keys():											#For every neighbour
 		yield (neighbour, node[1][1]*node[1][0][neighbour]*(1-DAMPING_FACTOR))	#Give a part of his weight
 
-def main(input, iterations):
+def main(input, output, iterations):
 
 	#OPEN
 	print("Opening file...")
@@ -48,7 +48,8 @@ def main(input, iterations):
 	#STEP 1 = Get nodes with their links
 	print("STEP 1 - Getting the nodes...")
 	nodes = links \
-				.flatMap(lambda line : getNodes(line)) \
+				.filter(lambda line: len(line.split('\t')) == 3) \
+				.flatMap(lambda line: getNodes(line)) \
 				.reduceByKey(lambda a, b: a+b) \
 				.map(lambda node: getDefaultWeight(node))
 
@@ -70,11 +71,10 @@ def main(input, iterations):
 	#STEP 4 = Order by weight
 	print("STEP 4 - Ordering ranks...")
 	orderedRanks = ranks.sortBy(lambda node: node[1])
-	time = str(datetime.datetime.now()).replace('.','_').replace(':','-')
 
 	#SAVE
 	print("Saving file...")
-	orderedRanks.coalesce(1).saveAsTextFile(time)
+	orderedRanks.coalesce(1).saveAsTextFile(output)
 	sc.stop()
 
 	print("Done !")
@@ -95,9 +95,12 @@ if __name__ == '__main__':		#If main function
 			sys.exit(-1)
 
 		if(sys.argv[1][0] == '/'): 	#If absolute
-			input = sys.argv[1]
+			path = sys.argv[1][0:sys.argv[1].rfind('/')+1]
+			input = path + sys.argv[1][sys.argv[1].rfind('/')+1:]
 		else:						#If relative
-			input = os.getcwd() + "/" + sys.argv[1]
+			path = os.getcwd() + "/"
+			input = path + sys.argv[1]
+		output =  path + str(datetime.datetime.now()).replace('.','_').replace(':','-')
 
 		try:
 			iterations = int(sys.argv[2])
@@ -105,7 +108,11 @@ if __name__ == '__main__':		#If main function
 			print("<iteration> have to be a number.")
 			sys.exit(-1)
 
-		main(input, iterations)	#Run spark
+		print("====")
+		print(input)
+		print(output)
+		print("====")
+		main(input, output, iterations)	#Run spark
 	except KeyboardInterrupt:		#If Ctrl+C
 		pass 							#Do nothing
 	except:							#If any other exception
