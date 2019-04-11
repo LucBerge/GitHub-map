@@ -3,4 +3,4 @@
 **/*.sh
 **/*.pyc
 **/*.db
-
+src/data/links.txt
