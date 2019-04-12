@@ -72,3 +72,21 @@ sudo pip3 install google-api-python-client requests bs4 selenium sqlite3 mrjob m
 - test folder : Only here as a sandbox. It is sometime usefull to try queries on the kaggle database before implementing.
 - sample folder : Implementation of the final code with only 100 commits instead of 128 millions
 - src folder : Implementation of the final code with every commits
+
+## Results
+
+### Top 10 (10 iterations)
+_Links with more than 100 commits_
+
+| Rank | Repo | User |
+|:-|:-|:-|
+| #1 | MrAlex94/Waterfox (361.89) | Will Farrington (515.76) |
+| #2 | shenzhouzd/update (187.46) | Guillermo Rauch (rauchg)(385.87) |
+| #3 | jrobhoward/SCADAbase (111.18) | Fabien Potencier (364.15) |
+| #4 | kunj1988/Magento2 (88.52) | Unknown (352.42) |
+| #5 | xorware/android_frameworks_base (74.20) | Jade Dominguez (Jade)(338.51) |
+| #6 | tarunprabhu/DragonEgg (74.10) | Robby Russell (robbyrussell)(337.33) |
+| #7 | meego-tablet-ux/meego-app-browser (43.94) | Durran Jordan (336.83) |
+| #8 | wistoch/meego-app-browser (42.09) | Mathias Bynens (334.03) |
+| #9 | orumin/openbsd-efivars (39.42) | Unknown (305.73) |
+| #10 | xen2/mcs (38.49) | Max Lv (304.37) |
