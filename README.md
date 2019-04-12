@@ -75,18 +75,18 @@ sudo pip3 install google-api-python-client requests bs4 selenium sqlite3 mrjob m
 
 ## Results
 
-### Top 10 (10 iterations)
+### Top 10 (20 iterations)
 _Links with more than 100 commits_
 
 | Rank | Repo | User |
 |:-|:-|:-|
-| #1 | MrAlex94/Waterfox (361.89) | Will Farrington (515.76) |
-| #2 | shenzhouzd/update (187.46) | Guillermo Rauch (rauchg)(385.87) |
-| #3 | jrobhoward/SCADAbase (111.18) | Fabien Potencier (364.15) |
-| #4 | kunj1988/Magento2 (88.52) | Unknown (352.42) |
-| #5 | xorware/android_frameworks_base (74.20) | Jade Dominguez (Jade)(338.51) |
-| #6 | tarunprabhu/DragonEgg (74.10) | Robby Russell (robbyrussell)(337.33) |
-| #7 | meego-tablet-ux/meego-app-browser (43.94) | Durran Jordan (336.83) |
-| #8 | wistoch/meego-app-browser (42.09) | Mathias Bynens (334.03) |
-| #9 | orumin/openbsd-efivars (39.42) | Unknown (305.73) |
-| #10 | xen2/mcs (38.49) | Max Lv (304.37) |
+| #1 | MrAlex94/Waterfox (367.31) | Barry Clark (barryclark)(1473.90) |
+| #2 | shenzhouzd/update (282.67) | Hakim El Hattab (hakimel)() |
+| #3 | jrobhoward/SCADAbase (112.32) | clowwindy (clowwindy)(758.55) |
+| #4 | kunj1988/Magento2 (8640) | Michael Rose (715.00) |
+| #5 | xorware/android_frameworks_base (80.73) | Gerrit Code Review (580.55) |
+| #6 | tarunprabhu/DragonEgg (76.53) | Will Farrington (528.61) |
+| #7 | meego-tablet-ux/meego-app-browser (44.63) | Guillermo Rauch (rauchg)(409.58) |
+| #8 | wistoch/meego-app-browser (43.68) | Fabien Potencier (408.16) |
+| #9 | xen2/mcs (41.96) | Durran Jordan (359.46) |
+| #10 | orumin/openbsd-efivars (40.46) | Robby Russell (robbyrussell)(355.38) |
