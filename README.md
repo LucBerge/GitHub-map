@@ -81,12 +81,12 @@ _Links with more than 100 commits_
 | Rank | Repo | User |
 |:-|:-|:-|
 | #1 | MrAlex94/Waterfox (367.31) | Barry Clark (barryclark)(1473.90) |
-| #2 | shenzhouzd/update (282.67) | Hakim El Hattab (hakimel)() |
+| #2 | shenzhouzd/update (282.67) | Hakim El Hattab (hakimel)(1002.71) |
 | #3 | jrobhoward/SCADAbase (112.32) | clowwindy (clowwindy)(758.55) |
 | #4 | kunj1988/Magento2 (8640) | Michael Rose (715.00) |
 | #5 | xorware/android_frameworks_base (80.73) | Gerrit Code Review (580.55) |
-| #6 | tarunprabhu/DragonEgg (76.53) | Will Farrington (528.61) |
+| #6 | tarunprabhu/DragonEgg (76.53) | Will Farrington (wfarr)(528.61) |
 | #7 | meego-tablet-ux/meego-app-browser (44.63) | Guillermo Rauch (rauchg)(409.58) |
-| #8 | wistoch/meego-app-browser (43.68) | Fabien Potencier (408.16) |
-| #9 | xen2/mcs (41.96) | Durran Jordan (359.46) |
+| #8 | wistoch/meego-app-browser (43.68) | Fabien Potencier (fabpot)(408.16) |
+| #9 | xen2/mcs (41.96) | Durran Jordan (durran)(359.46) |
 | #10 | orumin/openbsd-efivars (40.46) | Robby Russell (robbyrussell)(355.38) |
