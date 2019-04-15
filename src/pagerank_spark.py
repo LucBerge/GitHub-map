@@ -61,6 +61,7 @@ def main(input, output, iterations):
 	print('0/' + str(iterations))
 
 	for i in range(iterations):
+		ranks.saveAsTextFile(output + "/" + str(i))
 		ranks = nodes \
 					.join(ranks) \
 					.flatMap(lambda node: setWeight(node)) \
@@ -74,7 +75,7 @@ def main(input, output, iterations):
 
 	#SAVE
 	print("Saving file...")
-	orderedRanks.saveAsTextFile(output)
+	orderedRanks.saveAsTextFile(output + "/" + str(iterations))
 	sc.stop()
 
 	print("Done !")
