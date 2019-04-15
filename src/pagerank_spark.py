@@ -17,7 +17,7 @@ def getNodes(line):
 	yield repo, (email, commits)		#Yield the repo node as str
 	yield email, (repo, commits)		#Yield the user node as str
 
-def getDefaultWeight(node):
+def getLinks(node):
 	name = node[0]
 	neighbours = node[1]
 	links = {}
@@ -29,14 +29,13 @@ def getDefaultWeight(node):
 	for i in range(0, len(neighbours), 2):
 		links[neighbours[i]] = neighbours[i+1]/total_commits
 
-	return name, links#({'name':name, 'links':links}, 1)
+	return name, links
 
 #STEP 2
 def setWeight(node):
 
-	yield (node[0], node[1][1]*DAMPING_FACTOR) 									#Keep a part of his weight
 	for neighbour in node[1][0].keys():											#For every neighbour
-		yield (neighbour, node[1][1]*node[1][0][neighbour]*(1-DAMPING_FACTOR))	#Give a part of his weight
+		yield (neighbour, node[1][1]*node[1][0][neighbour])
 
 def main(input, output, iterations):
 
@@ -51,7 +50,7 @@ def main(input, output, iterations):
 				.filter(lambda line: len(line.split('\t')) == 3) \
 				.flatMap(lambda line: getNodes(line)) \
 				.reduceByKey(lambda a, b: a+b) \
-				.map(lambda node: getDefaultWeight(node))
+				.map(lambda node: getLinks(node))
 
 	#STEP 2 = Get default weight
 	print("STEP 2 - Getting default weight...")
@@ -65,7 +64,8 @@ def main(input, output, iterations):
 		ranks = nodes \
 					.join(ranks) \
 					.flatMap(lambda node: setWeight(node)) \
-					.reduceByKey(lambda a, b: a + b)
+					.reduceByKey(lambda a, b: a + b) \
+					.mapValues(lambda rank: rank*DAMPING_FACTOR + (1-DAMPING_FACTOR))
 		print('\033[F' + str(i+1) + '/' + str(iterations))
 
 	#STEP 4 = Order by weight
@@ -74,7 +74,7 @@ def main(input, output, iterations):
 
 	#SAVE
 	print("Saving file...")
-	orderedRanks.coalesce(1).saveAsTextFile(output)
+	orderedRanks.saveAsTextFile(output)
 	sc.stop()
 
 	print("Done !")
