@@ -23,8 +23,7 @@ class PageRank(MRJob):
 			help='Pourcentage of weigth the node keep for himself')
 
 	def steps(self):	#Set steps
-		steps = [MRStep(mapper=self.get_commits_mapper, reducer=self.get_commits_reducer)]	#1 - Get commits
-		steps.append(MRStep(reducer=self.get_weight_reducer))								# 2 - Get the default waight
+		steps = [MRStep(mapper=self.get_commits_mapper, reducer=self.get_commits_reducer)]	#1 - Get commits								# 2 - Get the default waight
 
 		for i in range(self.options.iterations):
 			steps.append(MRStep(mapper=self.pagerank_mapper,								# 3 to N - Page rank step
@@ -64,16 +63,9 @@ class PageRank(MRJob):
 			links[value[0]] = value[1]/total_commits		#Add the pourcentage for the node in the link dict
 
 		node['links'] = links	#Add the links dict to the key
-		yield None, node 		#Yield all nodes with the None key to be able to acces all nodes from one key
+		yield node, 1 			#Yield all nodes with their default weight
 
-	# STEP 2 = Get the default weight for each node
-	def get_weight_reducer(self, _, nodes):	
-		tab_nodes = [node for node in nodes] 	#Get the values as a regular list
-		N = len(tab_nodes)						#Get the number of nodes
-		for node in tab_nodes:					#For each node
-			yield node, 1/N 						#Yield the node as key with the default weight as value
-
-	#STEP 3 to 3+N = Page rank
+	#STEP 2 to 2+N = Page rank
 	def pagerank_mapper(self, node, weight):
 		yield {'key' : node['key']}, node['links']												#Give links to himself
 		yield {'key' : node['key']}, weight*self.options.damping_factor							#Keep a part of his weight
@@ -92,7 +84,7 @@ class PageRank(MRJob):
 
 		yield node, weight				#Set the new weight
 
-	#STEp 4+N = Sort output
+	#STEp 3+N = Sort output
 	def output_mapper(self, node, weight):
 		yield None, (weight, node)			#Yield all nodes with the None key to be able to acces all nodes from one key
 
