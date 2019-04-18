@@ -10,8 +10,8 @@ class PageRankGraph:
 
 	MAX_ITERATIONS = 2000
 
-	EPSILON = 0.1
-	SPEED = 1
+	DAMPING_FACTOR = 0.85
+	SPEED = 0.5
 
 	OUTPUT_FOLDER = None
 	OUTPUT_EXTENTION = None
@@ -33,7 +33,7 @@ class PageRankGraph:
 
 		self.cursor.execute('''CREATE TABLE IF NOT EXISTS settings
 				(id TEXT NOT NULL,
-	             epsilon FLOAT DEFAULT 0.1,
+	             damping_factor FLOAT DEFAULT 0.85,
 	             speed FLOAT DEFAULT 0.5,
 	             output_folder TEXT DEFAULT "plot/",
 	             output_extension TEXT DEFAULT ".svg",
@@ -77,7 +77,7 @@ class PageRankGraph:
 							UPDATE settings SET stabilized=0 WHERE id=0;
 						END''')
 
-		self.EPSILON = self.get_epsilon()
+		self.DAMPING_FACTOR = self.get_damping_factor()
 		self.SPEED = self.get_speed()
 		self.OUTPUT_FOLDER = self.get_output_folder()
 		self.OUTPUT_EXTENTION = self.get_output_extention()
@@ -92,8 +92,8 @@ class PageRankGraph:
 	# SETTINGS TABLE #
 	##################
 
-	def get_epsilon(self):
-		self.cursor.execute('''SELECT epsilon FROM settings WHERE id=0''')
+	def get_damping_factor(self):
+		self.cursor.execute('''SELECT damping_factor FROM settings WHERE id=0''')
 		return	self.cursor.fetchall()[0][0]
 
 	def get_speed(self):
@@ -116,8 +116,8 @@ class PageRankGraph:
 		self.cursor.execute('''SELECT stabilized FROM settings WHERE id=0''')
 		return	self.cursor.fetchall()[0][0]
 
-	def set_epsilon(self, epsilon):
-		self.cursor.execute('''SELECT epsilon FROM settings WHERE id=0''', (epsilon,))
+	def set_damping_factor(self, damping_factor):
+		self.cursor.execute('''SELECT damping_factor FROM settings WHERE id=0''', (damping_factor,))
 
 	def set_speed(self, speed):
 		self.cursor.execute('''UPDATE settings SET speed=? WHERE id=0''', (speed,))
@@ -163,7 +163,7 @@ class PageRankGraph:
 	def find_link(self, id1, id2):
 		self.cursor.execute('''SELECT w, m FROM links WHERE id1=? AND id2=?''', (id1, id2,))
 		result = self.cursor.fetchall()
-		return result[0] if len(result) != 0 else [None, None]
+		return result[0] if len(result) != 0 else [0, 0]
 
 	def insert_link(self, id1, id2, w):
 		self.cursor.execute('''INSERT OR IGNORE INTO links (id1, id2, w) VALUES (?, ?, ?)''', (id1, id2, w,))
@@ -208,29 +208,21 @@ class PageRankGraph:
 		self.N = len(self.nodes)
 
 		#Weight of every nodes
-		self.W = numpy.full((self.N, 1), 1/self.N)
+		self.W = numpy.full((self.N, 1), 1)
 
 		#Position of every nodes
-		self.P = (numpy.random.rand(self.N,2)-0.5)
+		self.P = (numpy.random.rand(self.N,2)-0.5)*self.N
 
 		#Connections between nodes
-		B = numpy.zeros((self.N, self.N))
+		A = numpy.zeros((self.N, self.N))
 
 		links = self.get_links()
 		for id1, id2, w, m in links:
 			index_id1 = self.nodes.index(id1)
 			index_id2 = self.nodes.index(id2)
-			B[index_id1][index_id2] = w
+			A[index_id1][index_id2] = w
 
-		A = copy.deepcopy(B)
-		for i in range(self.N):
-			t = numpy.sum(B[i])
-			for j in range(self.N):
-				A[j][i] = B[i][j]/t if t!=0 else 0
-
-		self.M = A*(1-self.EPSILON) + numpy.full((self.N, 1),self.EPSILON/self.N)
-		self.not_linked_value = numpy.amin(self.M)
-
+		self.M = A/numpy.sum(A, axis=1)
 		return self.M, self.W, self.P
 
 	def load_graph(self):
@@ -253,7 +245,6 @@ class PageRankGraph:
 			for j in range(self.N):
 				self.M[i][j] = self.find_link(self.nodes[i], self.nodes[j])[1]
 
-		self.not_linked_value = numpy.amin(self.M)
 		return self.M, self.W, self.P
 
 	def save_graph(self):
@@ -269,7 +260,7 @@ class PageRankGraph:
 	# STABILIZATION FUNCTIONS #
 	###########################
 
-	def stabilize(self, error_size, error_move, pageRank=True, move=True, repulsion=True, plot=False):
+	def stabilize(self, pagerank_error=1, spring_layout_error=1, pagerank_enabled=True, spring_layout_enabled=True, plot=False):
 		
 		if (not os.path.exists(self.OUTPUT_FOLDER)) and plot:
 			print("Creating output folder...")
@@ -283,15 +274,22 @@ class PageRankGraph:
 		print("Stabilization in progress...")
 		print('0/' + str(self.MAX_ITERATIONS))
 
+		pagerank_stabilized = spring_layout_stabilized = False
+
 		for i in range(self.MAX_ITERATIONS):
 			if(plot):
 				self.plot(str(i) + self.OUTPUT_EXTENTION)
 
-			self.W, self.P, size_stabilized, move_stabilized = self.step(error_size, error_move, pageRank=pageRank, move=move, repulsion=repulsion)
+			if(pagerank_enabled and not pagerank_stabilized):
+				self.W, pagerank_stabilized = self.step_size(pagerank_error)
+
+			if(spring_layout_enabled and not spring_layout_stabilized):
+				self.P, spring_layout_stabilized = self.step_move(spring_layout_error)
+
 			self.iteration+=1
 			print('\033[F' + str(i+1) + '/' + str(self.MAX_ITERATIONS))
 
-			if(size_stabilized and move_stabilized):
+			if(pagerank_stabilized and spring_layout_stabilized):
 				break
 
 		self.save_graph()
@@ -299,34 +297,23 @@ class PageRankGraph:
 
 		return self.M, self.W, self.P, self.iteration
 
-	def step(self, error_size, error_move, pageRank=True, move=True, repulsion=True):
-			if pageRank:
-				self.W, size_stabilized = self.step_size(error_size)
-			else:
-				size_stabilized = True
-			if move:
-				self.P, move_stabilized = self.step_move(error_move, repulsion)
-			else:
-				move_stabilized = True
-			return self.W, self.P, size_stabilized, move_stabilized
-
 	################
 	# PAGE RANKING #
 	################
 
-	def step_size(self, error_size):
-		Wn = numpy.matmul(self.M, self.W)
-		stabilized = self.is_size_stabilized(self.W, Wn, error_size)
+	def step_size(self, pagerank_error):
+		Wn = numpy.matmul(self.M, self.W)*self.DAMPING_FACTOR + numpy.full((self.N, 1),1-self.DAMPING_FACTOR)
+		stabilized = self.is_pagerank_stabilized(self.W, Wn, pagerank_error)
 		return Wn, stabilized
 
-	def is_size_stabilized(self, W, Wn, error):
-		return False not in (numpy.absolute(numpy.subtract(W, Wn)) < error)
+	def is_pagerank_stabilized(self, W, Wn, error):
+		return (numpy.sum(numpy.absolute(numpy.subtract(W, Wn)))) < error
 
 	######################
 	# GRAPH POSITIONNING #
 	######################
 
-	def step_move(self, error_move, repulsion):
+	def step_move(self, spring_layout_error):
 
 		V = Va = Vr = numpy.zeros((self.N, 2))
 		for i in range(self.N):
@@ -343,10 +330,10 @@ class PageRankGraph:
 					target = R + 2*r
 					x = self.get_distance(self.P[i], self.P[j])
 
-					if(target < x and self.are_linked(i, j)):	# If attraction
+					if(target < x and self.M[i][j] != 0):	# If attraction
 						Va[i] += self.get_unit_vector(self.P[i], self.P[j])*self.getForce(r, R, x)
 						number_of_attractions+=1
-					elif x < target: # and self.W[i] <= self.W[j]: # If repulsion
+					elif x < target:
 						Vr[i] -= self.get_unit_vector(self.P[i], self.P[j])*self.getForce(r, R, x)
 						number_of_repulsions += 1
 
@@ -358,7 +345,7 @@ class PageRankGraph:
 
 
 		Pn = numpy.add(self.P, V)
-		stabilized = self.is_move_stabilized(self.P, Pn, error_move)
+		stabilized = self.is_move_stabilized(self.P, Pn, spring_layout_error)
 		return Pn, stabilized
 
 	def getForce(self, r, R, x):
@@ -374,11 +361,8 @@ class PageRankGraph:
 	def get_distance(self, P1, P2):
 		return math.sqrt((P1[0]-P2[0])**2 + (P1[1]-P2[1])**2)
 
-	def are_linked(self, i, j):
-		return self.M[i][j] != self.not_linked_value
-
 	def is_move_stabilized(self, P, Pn, error):
-		return False not in (numpy.absolute(numpy.subtract(P, Pn)) < error)
+		return False not in (numpy.absolute(numpy.subtract(P, Pn)) < self.W/error)
 	
 	###########
 	# PLOTING #
@@ -399,7 +383,7 @@ class PageRankGraph:
 		ax.add_collection(c)
 
 		for i in range(self.N):
-			ax.annotate(self.nodes[i], xy=(self.P[i][0], self.P[i][1]), fontsize=self.W[i]*150, va="center", ha="center")
+			ax.annotate(self.nodes[i], xy=(self.P[i][0], self.P[i][1]), fontsize=self.W[i]*150/self.N, va="center", ha="center")
 
 		ax.set_xlim(MIN_X - MAX_W, MAX_X + MAX_W)
 		ax.set_ylim(MIN_Y - MAX_W, MAX_Y + MAX_W)
