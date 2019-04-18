@@ -56,6 +56,6 @@ def createRandomGraph(G):
 
 G = PageRankGraph('example.db')
 createABCGraph(G)
-G.stabilize(spring_layout_error=100, plot=False)
+G.stabilize()
 G.close()
 G.plot()

@@ -260,7 +260,7 @@ class PageRankGraph:
 	# STABILIZATION FUNCTIONS #
 	###########################
 
-	def stabilize(self, pagerank_error=1, spring_layout_error=1, pagerank_enabled=True, spring_layout_enabled=True, plot=False):
+	def stabilize(self, pagerank_error=1, spring_layout_error=100, pagerank_enabled=True, spring_layout_enabled=True, plot=False):
 		
 		if (not os.path.exists(self.OUTPUT_FOLDER)) and plot:
 			print("Creating output folder...")
