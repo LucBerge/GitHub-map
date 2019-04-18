@@ -11,29 +11,22 @@ def log(x):
 
 # STEP 1
 def getNodes(line):
-	email = line.split('\t')[0]
-	repo = line.split('\t')[1]
-	commits = int(line.split('\t')[2])
-	yield repo, (email, commits)		#Yield the repo node as str
-	yield email, (repo, commits)		#Yield the user node as str
+	values = line.strip().split('\t')				#Strip and split each line
+	if len(values) == 3:							#If the line have 3 values
+		yield values[0], (values[1], int(values[2]))	#Yield the repo node as str
+		yield values[1], (values[0], int(values[2]))	#Yield the user node as str
 
 def getLinks(node):
-	name = node[0]
-	neighbours = node[1]
 	links = {}
 	total_commits = 0
-
-	for i in range(1, len(neighbours), 2):
-		total_commits += neighbours[i]
-
-	for i in range(0, len(neighbours), 2):
-		links[neighbours[i]] = neighbours[i+1]/total_commits
-
-	return name, links
+	for i in range(1, len(node[1]), 2):
+		total_commits += node[1][i]
+	for i in range(0, len(node[1]), 2):
+		links[node[1][i]] = node[1][i+1]/total_commits
+	return node[0], links
 
 #STEP 2
 def setWeight(node):
-
 	for neighbour in node[1][0].keys():											#For every neighbour
 		yield (neighbour, node[1][1]*node[1][0][neighbour])
 
@@ -42,19 +35,19 @@ def main(input, output, iterations):
 	#OPEN
 	print("Opening file...")
 	sc = pyspark.SparkContext(appName="pagerank")
-	links = sc.textFile("file://" + input)
+	commits = sc.textFile("file://" + input)
 
-	#STEP 1 = Get nodes with their links
-	print("STEP 1 - Getting the nodes...")
-	nodes = links \
+	#STEP 1 = Get the links for each node
+	print("STEP 1 - Getting the links...")
+	links = commits \
 				.filter(lambda line: len(line.split('\t')) == 3) \
 				.flatMap(lambda line: getNodes(line)) \
 				.reduceByKey(lambda a, b: a+b) \
 				.map(lambda node: getLinks(node))
 
 	#STEP 2 = Get default weight
-	print("STEP 2 - Getting default weight...")
-	ranks = nodes.map(lambda node: (node[0], 1))
+	print("STEP 2 - Setting default weight...")
+	ranks = links.map(lambda node: (node[0], 1))
 
 	#STEP 3 to 3+N = Page ranking
 	print("STEP 3 - Page ranking in progress...")
@@ -62,7 +55,7 @@ def main(input, output, iterations):
 
 	for i in range(iterations):
 		ranks.saveAsTextFile(output + "/" + str(i))
-		ranks = nodes \
+		ranks = links \
 					.join(ranks) \
 					.flatMap(lambda node: setWeight(node)) \
 					.reduceByKey(lambda a, b: a + b) \
@@ -71,7 +64,7 @@ def main(input, output, iterations):
 
 	#STEP 4 = Order by weight
 	print("STEP 4 - Ordering ranks...")
-	orderedRanks = ranks.sortBy(lambda node: node[1])
+	orderedRanks = ranks.sortBy(lambda node: node[1], False)
 
 	#SAVE
 	print("Saving file...")

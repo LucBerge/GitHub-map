@@ -14,7 +14,6 @@ class PageRank(MRJob):
 
 	def configure_options(self):	#Set options for command line call
 		super(PageRank, self).configure_options()	#Call the super constructor
-		
 		self.add_passthrough_option(	#Add option --iterations wich represent the number of iterations for the pagerank (default 10)
 			'--iterations', dest='iterations', default=10, type='int',
 			help='The number of iterations')
@@ -24,13 +23,10 @@ class PageRank(MRJob):
 
 	def steps(self):	#Set steps
 		steps = [MRStep(mapper=self.get_commits_mapper, reducer=self.get_commits_reducer)]	#1 - Get commits								# 2 - Get the default waight
-
 		for i in range(self.options.iterations):
 			steps.append(MRStep(mapper=self.pagerank_mapper,								# 3 to N - Page rank step
 								reducer=self.pagerank_reducer))
-
 		steps.append(MRStep(mapper=self.output_mapper, reducer=self.output_reducer))		# 4 - Sort the output
-
 		return steps
 
 	#########
@@ -38,59 +34,45 @@ class PageRank(MRJob):
 	#########
 
 	# STEP 1 = Get the number of commits
+	def get_commits_mapper(self, _, line):
+		values = line.strip().split('\t')				#Strip and split each line
+		if len(values) == 3:							#If the line have 3 values
+			yield values[0], (values[1], int(values[2]))	#Yield the repo node as str
+			yield values[1], (values[0], int(values[2]))	#Yield the user node as str
 
-	# Get all links
-	def get_commits_mapper(self, key, value):
-
-		values = value.strip().split('\t')	 #Strip and split each line
-
-		if len(values) == 3:				#If the line have 3 values
-			repo = values[0]					#Get the repo name
-			email = values[1]					#Get the email
-			commits = values[2]					#Get the number of commits
-
-			yield repo, (email, int(commits))		#Yield the repo node as str
-			yield email, (repo, int(commits))		#Yield the user node as str
-
-	# Get all nodes with there links
-	def get_commits_reducer(self, node_name, values):	#Calcul the pourcentage for each link
-		node = {'key' : node_name}
+	def get_commits_reducer(self, name, values):	#Calcul the pourcentage for each link
+		node = {'name' : name}
 		links = {}
 		tab_values = [value for value in values]	#Get the values as a regular list
 		total_commits = sum([value[1] for value in tab_values])	#Get the total number of commits for the node
-
 		for value in tab_values:						#For each connected node
 			links[value[0]] = value[1]/total_commits		#Add the pourcentage for the node in the link dict
-
 		node['links'] = links	#Add the links dict to the key
 		yield node, 1 			#Yield all nodes with their default weight
 
 	#STEP 2 to 2+N = Page rank
 	def pagerank_mapper(self, node, weight):
-		yield {'key' : node['key']}, node['links']												#Give links to himself
-		yield {'key' : node['key']}, weight*self.options.damping_factor							#Keep a part of his weight
-		neighbours = node['links'] 		
-																								#Get neighbours
-		for neighbour in neighbours.keys():														#For every neighbour
-			yield {'key' : neighbour}, weight*neighbours[neighbour]*(1-self.options.damping_factor)	#Give a part of his weight
+		yield node['name'], node['links']					#Give links to himself																
+		for neighbour in node['links'].keys():				#For every neighbour
+			yield neighbour, weight*node['links'][neighbour]	#Give a part of his weight
 
-	def pagerank_reducer(self, node, values):
-		weight = 0						#Set the new weight to 0
-		for value in values:			#For all values
-			if(type(value) == dict):		#If its the links gived by himself
-				node['links'] = value			#Store it
-			else:							#If it is a weight
-				weight+=value			#Add it
-
-		yield node, weight				#Set the new weight
+	def pagerank_reducer(self, name, values):
+		node = {'name' : name}
+		weight = 0					#Set the new weight to 0
+		for value in values:		#For all values
+			if(type(value) == dict):	#If its the links gived by himself
+				node['links'] = value		#Store it
+			else:						#If it is a weight
+				weight+=value				#Add it
+		yield node, weight*self.options.damping_factor+(1-self.options.damping_factor)				#Set the new weight
 
 	#STEp 3+N = Sort output
 	def output_mapper(self, node, weight):
-		yield None, (weight, node)			#Yield all nodes with the None key to be able to acces all nodes from one key
+		yield None, (weight, node['name'])			#Yield all nodes with the None key to be able to acces all nodes from one key
 
 	def output_reducer(self, _, nodes):
 		for weight, node in sorted(nodes, reverse=True):	#For all nodes sorted by weight
-			yield (weight, node['key'])							#Yield the final weight
+			yield node, weight 									#Yield the final weight
 
 ########
 # MAIN #
