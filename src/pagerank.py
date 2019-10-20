@@ -35,6 +35,7 @@ def main(input, output, iterations):
 	#OPEN
 	print("Opening file...")
 	sc = pyspark.SparkContext(appName="pagerank")
+	sc.setLogLevel("ERROR")
 	commits = sc.textFile("file://" + input)
 
 	#STEP 1 = Get the links for each node
@@ -54,7 +55,7 @@ def main(input, output, iterations):
 	print('0/' + str(iterations))
 
 	for i in range(iterations):
-		ranks.saveAsTextFile(output + "/" + str(i))
+		#ranks.saveAsTextFile(output + "/" + str(i))
 		ranks = links \
 					.join(ranks) \
 					.flatMap(lambda node: setWeight(node)) \
@@ -68,7 +69,10 @@ def main(input, output, iterations):
 
 	#SAVE
 	print("Saving file...")
-	orderedRanks.saveAsTextFile(output + "/" + str(iterations))
+	#orderedRanks.saveAsTextFile(output + "/" + str(iterations))
+	sqlContext = pyspark.sql.SQLContext(sc)
+	dataFrame = sqlContext.createDataFrame(orderedRanks)
+	dataFrame.repartition(1).write.format("com.databricks.spark.csv").save(output)
 	sc.stop()
 
 	print("Done !")
