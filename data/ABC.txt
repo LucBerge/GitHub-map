@@ -1,0 +1,5 @@
+user@1	repo/A	6
+user@2	repo/A	1
+user@2	repo/B	2
+user@2	repo/C	3
+user@3	repo/C	1
