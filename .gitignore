@@ -3,4 +3,8 @@
 **/*.sh
 **/*.pyc
 **/*.db
-src/data/links.txt
+doc/
+data/links.txt
+data/links_sample.txt
+data/users.txt
+data/repos_scrapping.txt
