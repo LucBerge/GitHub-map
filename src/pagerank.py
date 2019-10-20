@@ -1,10 +1,7 @@
 #!/usr/bin/python
 
 from __future__ import division
-import os, traceback, sys
-import pyspark, datetime
-
-DAMPING_FACTOR = 0.85
+import os, traceback, sys, pyspark, datetime, argparse
 
 def log(x):
 	print(x)
@@ -30,88 +27,93 @@ def setWeight(node):
 	for neighbour in node[1][0].keys():											#For every neighbour
 		yield (neighbour, node[1][1]*node[1][0][neighbour])
 
-def main(input, output, iterations):
+class PageRank:
 
-	#OPEN
-	print("Opening file...")
-	sc = pyspark.SparkContext(appName="pagerank")
-	sc.setLogLevel("ERROR")
-	commits = sc.textFile("file://" + input)
+	DAMPING_FACTOR = 0.85
 
-	#STEP 1 = Get the links for each node
-	print("STEP 1 - Getting the links...")
-	links = commits \
-				.filter(lambda line: len(line.split('\t')) == 3) \
-				.flatMap(lambda line: getNodes(line)) \
-				.reduceByKey(lambda a, b: a+b) \
-				.map(lambda node: getLinks(node))
+	def __init__(self, input, output, max_iterations, trace):
+		self.input = input
+		self.output = output
+		self.max_iterations = max_iterations
+		self.trace = trace
 
-	#STEP 2 = Get default weight
-	print("STEP 2 - Setting default weight...")
-	ranks = links.map(lambda node: (node[0], 1))
+	def start(self):
 
-	#STEP 3 to 3+N = Page ranking
-	print("STEP 3 - Page ranking in progress...")
-	print('0/' + str(iterations))
+		#OPEN
+		log("Opening file...")
+		sc = pyspark.SparkContext(appName="pagerank")
+		sc.setLogLevel("ERROR")
+		commits = sc.textFile("file://" + self.input)
 
-	for i in range(iterations):
-		#ranks.saveAsTextFile(output + "/" + str(i))
-		ranks = links \
-					.join(ranks) \
-					.flatMap(lambda node: setWeight(node)) \
-					.reduceByKey(lambda a, b: a + b) \
-					.mapValues(lambda rank: rank*DAMPING_FACTOR + (1-DAMPING_FACTOR))
-		print('\033[F' + str(i+1) + '/' + str(iterations))
+		#STEP 1 = Get the links for each node
+		log("STEP 1 - Getting the links...")
+		links = commits \
+					.filter(lambda line: len(line.split('\t')) == 3) \
+					.flatMap(lambda line: getNodes(line)) \
+					.reduceByKey(lambda a, b: a+b) \
+					.map(lambda node: getLinks(node))
 
-	#STEP 4 = Order by weight
-	print("STEP 4 - Ordering ranks...")
-	orderedRanks = ranks.sortBy(lambda node: node[1], False)
+		#STEP 2 = Get default weight
+		log("STEP 2 - Setting default weight...")
+		ranks = links.map(lambda node: (node[0], 1))
 
-	#SAVE
-	print("Saving file...")
-	#orderedRanks.saveAsTextFile(output + "/" + str(iterations))
-	sqlContext = pyspark.sql.SQLContext(sc)
-	dataFrame = sqlContext.createDataFrame(orderedRanks)
-	dataFrame.repartition(1).write.format("com.databricks.spark.csv").save(output)
-	sc.stop()
+		#STEP 3 to 3+N = Page ranking
+		log("STEP 3 - Page ranking in progress...")
+		log('0/' + str(self.max_iterations))
 
-	print("Done !")
+		for i in range(self.max_iterations):
+			if(self.trace):
+				self.save_as_csv(sc, ranks, self.output + "/" + str(i))
+
+			ranks = links \
+						.join(ranks) \
+						.flatMap(lambda node: setWeight(node)) \
+						.reduceByKey(lambda a, b: a + b) \
+						.mapValues(lambda rank: rank*self.DAMPING_FACTOR + (1-self.DAMPING_FACTOR))
+			log('\033[F' + str(i+1) + '/' + str(self.max_iterations))
+
+		#STEP 4 = Order by weight
+		log("STEP 4 - Ordering ranks...")
+		orderedRanks = ranks.sortBy(lambda node: node[1], False)
+
+		#SAVE
+		log("Saving file...")
+		if(self.trace):
+			self.save_as_csv(sc, ranks, self.output + "/" + str(self.max_iterations))
+		else:
+			self.save_as_csv(sc, orderedRanks, self.output)
+		sc.stop()
+
+	def save_as_csv(self, sc, data, output):
+		sqlContext = pyspark.sql.SQLContext(sc)
+		dataFrame = sqlContext.createDataFrame(data)
+		dataFrame.repartition(1).write.format("com.databricks.spark.csv").save(output)
 
 ########
 # MAIN #
 ########
 
-if __name__ == '__main__':		#If main function
-	try:							#Try
-		if(len(sys.argv) != 3):
-			print("Usage : python <input> <iterations>")
-			sys.exit(-1)
+def main():
+	parser = argparse.ArgumentParser(description='Run pagerank algorithm on a link text file.')
+	parser.add_argument('input', help='The input links text file.')
+	parser.add_argument('-max-iterations', type=int, default=0, help='Max number of iterations.')
+	parser.add_argument('--trace', default=False, action='store_true', help='True to output a file for each iteration.')
+	args = parser.parse_args()
 
-		exists = os.path.isfile(sys.argv[1])
-		if(not input):
-			print("<input> have to be a file.")
-			sys.exit(-1)
+	if(not os.path.isfile(args.input)):
+		exit("The input file does not exists.")
 
-		if(sys.argv[1][0] == '/'): 	#If absolute
-			path = sys.argv[1][0:sys.argv[1].rfind('/')+1]
-			input = path + sys.argv[1][sys.argv[1].rfind('/')+1:]
-		else:						#If relative
-			path = os.getcwd() + "/"
-			input = path + sys.argv[1]
-		output =  path + str(datetime.datetime.now()).replace('.','_').replace(':','-')
+	if(args.max_iterations < 0):
+		exit("The -max-iterations option have to be more or equal to 0.")
 
-		try:
-			iterations = int(sys.argv[2])
-		except:
-			print("<iteration> have to be a number.")
-			sys.exit(-1)
+	args.input = os.path.abspath(args.input)
+	output = os.path.dirname(args.input) + '/' + str(datetime.datetime.now()).replace('.','_').replace(':','-')
 
-		print("====")
-		print(input)
-		print(output)
-		print("====")
-		main(input, output, iterations)	#Run spark
-	except KeyboardInterrupt:		#If Ctrl+C
-		pass 							#Do nothing
-	except:							#If any other exception
-		print(traceback.print_exc())	#print it
+	pr = PageRank(args.input, output, args.max_iterations, args.trace)
+	pr.start()
+
+if __name__ == '__main__':	#If main function
+	try:						#Try
+		main()						#Run spark
+	except KeyboardInterrupt:	#If Ctrl+C
+		pass 						#Do nothing
