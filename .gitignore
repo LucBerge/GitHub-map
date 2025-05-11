@@ -1,0 +1,10 @@
+**/*.json
+**/*.pem
+**/*.sh
+**/*.pyc
+**/*.db
+doc/
+data/links.txt
+data/links_sample.txt
+data/users.txt
+data/repos_scrapping.txt
